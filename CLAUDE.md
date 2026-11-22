@@ -14,7 +14,7 @@ Melissa's personal goal-setting and planning app. Built first as a Claude artifa
 | `downloads` | Backup export | A normal browser download |
 | `user` | Declared, barely used | Auth |
 
-Before changing anything, ask Melissa which path she wants:
+**Status: path 1 (standalone) is built.** `app/runtime.js` replaces `window.claude` with Supabase; see `docs/DEPLOY.md`. The notes below describe the original artifact. Before big changes, still ask:
 
 1. **Standalone app** (own hosting, own database, login, usable on any device and later by other people). This is a rebuild of the data layer; the UI and logic carry over.
 2. **Keep it as an artifact** and only use Claude Code to edit the file. Publishing back to claude.ai is done from a Claude chat, not from here.

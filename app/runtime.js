@@ -1,0 +1,253 @@
+/* Life Hub runtime.
+   Replaces the claude.ai artifact runtime (window.claude.use) with Supabase, so the
+   app runs on its own. The UI in index.html is unchanged: it still asks for
+   "db", "assets", "sample", "downloads" and "user", and this file answers.
+
+   Needs config.js (SUPABASE_URL, SUPABASE_ANON_KEY). The anon key is meant to be
+   public; every row is protected by row-level security (see supabase/migrations). */
+(function () {
+  "use strict";
+  var cfg = window.LIFEHUB_CONFIG || {};
+  if (!cfg.SUPABASE_URL || !window.supabase) return; // not configured: leave window.claude undefined (app shows its own notice)
+
+  var sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+  });
+
+  /* ---------- PWA ---------- */
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+    navigator.serviceWorker.addEventListener("message", function (e) {
+      // the service worker asks for the current token when it serves /_blob/<id>
+      if (e.data && e.data.type === "need-token" && e.ports && e.ports[0]) {
+        sb.auth.getSession().then(function (r) {
+          var s = r.data.session;
+          e.ports[0].postMessage(s ? { token: s.access_token, uid: s.user.id, url: cfg.SUPABASE_URL, key: cfg.SUPABASE_ANON_KEY } : null);
+        });
+      }
+    });
+  }
+
+  /* ---------- sign in ---------- */
+  var session = null;
+  var authReady = new Promise(function (resolve) {
+    var done = false;
+    function ok(s) { session = s; if (s && !done) { done = true; hideLogin(); resolve(s); } }
+    sb.auth.getSession().then(function (r) { if (r.data.session) ok(r.data.session); else showLogin(); });
+    sb.auth.onAuthStateChange(function (ev, s) {
+      if (ev === "SIGNED_OUT") { location.reload(); return; }
+      if (s) ok(s);
+    });
+  });
+
+  var overlay;
+  function showLogin() {
+    if (overlay) return;
+    var wait = function () { if (!document.body) return setTimeout(wait, 20); build(); };
+    wait();
+    function build() {
+      overlay = document.createElement("div");
+      overlay.setAttribute("style", "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg,#F1F1EF);color:var(--ink,#343432);font-family:var(--body,system-ui,sans-serif)");
+      overlay.innerHTML =
+        '<form id="lh-login" style="width:100%;max-width:380px;background:var(--surface,#F8F8F6);border:1px solid var(--line,#DCDCD8);border-radius:18px;padding:28px">' +
+        '<h1 style="font-family:var(--display,sans-serif);font-weight:900;text-transform:uppercase;letter-spacing:.06em;font-size:1.4rem;margin:0 0 4px">Life Hub</h1>' +
+        '<p style="margin:0 0 18px;color:var(--muted,#75756F)">Sign in to open your hub.</p>' +
+        '<label style="display:block;font-size:.8rem;margin-bottom:6px" for="lh-email">Email</label>' +
+        '<input id="lh-email" type="email" autocomplete="email" required style="width:100%;box-sizing:border-box;height:40px;border-radius:12px;border:1px solid var(--line,#DCDCD8);background:var(--field,#FCFCFA);color:inherit;padding:0 12px;font:inherit;margin-bottom:12px">' +
+        '<div id="lh-pwrow"><label style="display:block;font-size:.8rem;margin-bottom:6px" for="lh-pw">Password</label>' +
+        '<input id="lh-pw" type="password" autocomplete="current-password" style="width:100%;box-sizing:border-box;height:40px;border-radius:12px;border:1px solid var(--line,#DCDCD8);background:var(--field,#FCFCFA);color:inherit;padding:0 12px;font:inherit;margin-bottom:12px"></div>' +
+        '<button type="submit" id="lh-go" style="width:100%;height:42px;border-radius:12px;border:0;background:var(--accent,#3A3A38);color:var(--on-accent,#F8F8F6);font:inherit;font-weight:700;cursor:pointer">Sign in</button>' +
+        '<button type="button" id="lh-link" style="width:100%;margin-top:8px;height:40px;border-radius:12px;border:1px solid var(--line,#DCDCD8);background:transparent;color:inherit;font:inherit;cursor:pointer">Email me a sign-in link instead</button>' +
+        '<p id="lh-msg" role="status" style="min-height:1.2em;margin:14px 0 0;font-size:.85rem;color:var(--muted,#75756F)"></p></form>';
+      document.body.appendChild(overlay);
+      var f = overlay.querySelector("#lh-login"), em = f.querySelector("#lh-email"), pw = f.querySelector("#lh-pw"), msg = f.querySelector("#lh-msg");
+      function say(t, bad) { msg.textContent = t; msg.style.color = bad ? "var(--signal,#C4483C)" : "var(--muted,#75756F)"; }
+      f.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!pw.value) { say("Enter your password, or use the email link below.", true); return; }
+        say("Signing in…");
+        sb.auth.signInWithPassword({ email: em.value.trim(), password: pw.value }).then(function (r) {
+          if (r.error) say("That email and password did not match.", true);
+        });
+      });
+      f.querySelector("#lh-link").addEventListener("click", function () {
+        if (!em.value.trim()) { say("Type your email first.", true); return; }
+        say("Sending…");
+        sb.auth.signInWithOtp({ email: em.value.trim(), options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } }).then(function (r) {
+          if (r.error) say("Could not send the link. Check the email address.", true);
+          else say("Check your email and open the link on this device.");
+        });
+      });
+    }
+  }
+  function hideLogin() { if (overlay) { overlay.remove(); overlay = null; } }
+
+  /* ---------- db: Firestore-style API over one `docs` table ---------- */
+  var cache = {};      // coll -> {id: data}
+  var listeners = {};  // coll -> [fn]
+  var loaded = false, loading = null;
+
+  function emit(coll) {
+    (listeners[coll] || []).forEach(function (fn) { fn(); });
+  }
+  function snap(coll) {
+    var c = cache[coll] || {};
+    return { docs: Object.keys(c).map(function (id) { return { id: id, data: function () { return JSON.parse(JSON.stringify(c[id])); } }; }) };
+  }
+  function loadAll() {
+    if (loading) return loading;
+    loading = (async function () {
+      var out = {}, from = 0, size = 1000;
+      for (;;) {
+        var r = await sb.from("docs").select("coll,id,data").order("coll").order("id").range(from, from + size - 1);
+        if (r.error) throw r.error;
+        r.data.forEach(function (row) { (out[row.coll] = out[row.coll] || {})[row.id] = row.data; });
+        if (r.data.length < size) break;
+        from += size;
+      }
+      cache = out; loaded = true;
+      Object.keys(listeners).forEach(emit);
+      subscribe();
+    })();
+    loading.catch(function () { loading = null; });
+    return loading;
+  }
+  function subscribe() {
+    sb.channel("docs-" + session.user.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: "user_id=eq." + session.user.id }, function (p) {
+        var row = p.eventType === "DELETE" ? p.old : p.new;
+        if (!row || !row.coll) return;
+        if (p.eventType === "DELETE") { if (cache[row.coll]) delete cache[row.coll][row.id]; }
+        else (cache[row.coll] = cache[row.coll] || {})[row.id] = row.data;
+        emit(row.coll);
+      }).subscribe();
+  }
+  function put(coll, id, data) {
+    return sb.from("docs").upsert({ user_id: session.user.id, coll: coll, id: id, data: data, updated_at: new Date().toISOString() }, { onConflict: "user_id,coll,id" }).then(function (r) {
+      if (r.error) throw r.error;
+      (cache[coll] = cache[coll] || {})[id] = JSON.parse(JSON.stringify(data));
+      emit(coll);
+    });
+  }
+  function del(coll, id) {
+    return sb.from("docs").delete().eq("coll", coll).eq("id", id).then(function (r) {
+      if (r.error) throw r.error;
+      if (cache[coll]) delete cache[coll][id];
+      emit(coll);
+    });
+  }
+  function listen(coll, cb, onErr) {
+    var fire = function () { cb(coll === "meta" ? null : snap(coll)); };
+    (listeners[coll] = listeners[coll] || []).push(fire);
+    loadAll().then(function () { fire(); }, function (e) { if (onErr) onErr(e); });
+  }
+  var db = {
+    collection: function (c) {
+      return {
+        onSnapshot: function (cb, err) { listen(c, function () { cb(snap(c)); }, err); },
+        doc: function (id) { return { set: function (d) { return put(c, id, d); }, delete: function () { return del(c, id); } }; },
+      };
+    },
+    doc: function (path) {
+      var parts = path.split("/"), c = parts[0], id = parts.slice(1).join("/");
+      return {
+        set: function (d) { return put(c, id, d); },
+        delete: function () { return del(c, id); },
+        onSnapshot: function (cb, err) {
+          var fire = function () {
+            var has = cache[c] && Object.prototype.hasOwnProperty.call(cache[c], id);
+            cb({ exists: !!has, data: function () { return has ? JSON.parse(JSON.stringify(cache[c][id])) : undefined; } });
+          };
+          (listeners[c] = listeners[c] || []).push(fire);
+          loadAll().then(fire, function (e) { if (err) err(e); });
+        },
+      };
+    },
+  };
+
+  /* ---------- assets: files in a private Storage bucket, shown at /_blob/<id> ---------- */
+  function uid() { return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, ""); }
+  var assets = {
+    upload: function (file) {
+      var id = uid();
+      return sb.storage.from("files").upload(session.user.id + "/" + id, file, { contentType: file.type || "application/octet-stream", upsert: false }).then(function (r) {
+        if (r.error) throw r.error;
+        return { id: id, contentType: file.type || "application/octet-stream", sizeBytes: file.size };
+      });
+    },
+  };
+
+  /* ---------- sample: "Ask Claude" goes through the `claude` edge function ---------- */
+  function sample(prompt, opts) {
+    return sb.functions.invoke("claude", { body: { prompt: prompt, tier: (opts && opts.modelTier) || "default" } }).then(function (r) {
+      if (r.error) throw r.error;
+      return { text: (r.data && r.data.text) || "" };
+    });
+  }
+
+  /* ---------- downloads ---------- */
+  var downloads = {
+    save: function (o) {
+      return new Promise(function (resolve) {
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([o.data], { type: "application/json" }));
+        a.download = o.filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); resolve(); }, 1000);
+      });
+    },
+  };
+
+  /* ---------- window.claude ---------- */
+  window.claude = {
+    use: function (name) {
+      return authReady.then(function () {
+        if (name === "db") return db;
+        if (name === "assets") return assets;
+        if (name === "sample") return sample;
+        if (name === "downloads") return downloads;
+        if (name === "user") return { can: function () { return Promise.resolve(true); } };
+        return null;
+      });
+    },
+  };
+
+  /* ---------- Backup page: sign out, import ---------- */
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest && e.target.closest('[data-lh="signout"]');
+    if (t) sb.auth.signOut();
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (!t || !t.matches || !t.matches('[data-lh="import"]') || !t.files[0]) return;
+    var msg = document.getElementById("lh-import-msg");
+    var say = function (m) { if (msg) msg.textContent = m; };
+    var reader = new FileReader();
+    reader.onload = function () {
+      var j;
+      try { j = JSON.parse(reader.result); } catch (x) { say("That file is not a Life Hub backup."); return; }
+      var rows = [];
+      Object.keys(j).forEach(function (coll) {
+        var v = j[coll];
+        if (!v || typeof v !== "object" || Array.isArray(v)) return;
+        if (coll === "taxonomy" || coll === "levels") { rows.push({ coll: "meta", id: coll, data: v }); return; }
+        if (coll === "exportedAt" || coll === "app") return;
+        Object.keys(v).forEach(function (id) { rows.push({ coll: coll, id: id, data: v[id] }); });
+      });
+      if (!rows.length) { say("Nothing to import in that file."); return; }
+      say("Importing " + rows.length + " items…");
+      var uidv = session.user.id, i = 0;
+      (function next() {
+        if (i >= rows.length) { say("Imported " + rows.length + " items."); return; }
+        var chunk = rows.slice(i, i + 200).map(function (r) { return { user_id: uidv, coll: r.coll, id: r.id, data: r.data }; });
+        sb.from("docs").upsert(chunk, { onConflict: "user_id,coll,id" }).then(function (r) {
+          if (r.error) { say("Import stopped: " + r.error.message); return; }
+          chunk.forEach(function (x) { (cache[x.coll] = cache[x.coll] || {})[x.id] = x.data; emit(x.coll); });
+          i += 200; say("Imported " + Math.min(i, rows.length) + " of " + rows.length + "…"); next();
+        });
+      })();
+    };
+    reader.readAsText(t.files[0]);
+    t.value = "";
+  });
+})();

@@ -438,6 +438,14 @@ input[type=text]:focus,input[type=date]:focus,input[type=time]:focus,select:focu
 .plathead h2{font-size:1.25rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
 .card textarea + .f,.card .f label{color:var(--ink)}
 .f label{color:var(--ink);opacity:.82}
+/* OS dark mode with no manual choice: same overrides as the dark toggle */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--shade:#2E2E2C;--shade-line:#3C3C39;--field:#2A2A28;--field-line:#454541}
+  :root:not([data-theme="light"]) .tile{background:var(--surface)}
+  :root:not([data-theme="light"]) input[type=date]::-webkit-calendar-picker-indicator,:root:not([data-theme="light"]) input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1)}
+}
+/* header rows with arrows: let the title shrink and keep buttons together */
+.spread{flex-wrap:wrap}.spread .row{flex-wrap:nowrap}
 </style>
 </head>
 <body>

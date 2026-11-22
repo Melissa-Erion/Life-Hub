@@ -32,3 +32,5 @@ create policy "own files: update" on storage.objects for update to authenticated
   using (bucket_id = 'files' and (storage.foldername(name))[1] = (select auth.uid())::text);
 create policy "own files: delete" on storage.objects for delete to authenticated
   using (bucket_id = 'files' and (storage.foldername(name))[1] = (select auth.uid())::text);
+-- Defence in depth: the signed-out role gets no access to docs at all.
+revoke all on public.docs from anon;

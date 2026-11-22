@@ -1,7 +1,7 @@
 /* Life Hub service worker: caches the app shell so it opens fast and installs,
    and serves /_blob/<id> uploads from private Supabase Storage using the user's token. */
-var CACHE = "lifehub-v1";
-var SHELL = ["./", "index.html", "runtime.js", "config.js", "library.json", "pathways.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
+var CACHE = "lifehub-v2";
+var SHELL = ["./", "index.html", "runtime.js", "vendor/supabase.js", "config.js", "library.json", "pathways.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));

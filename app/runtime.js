@@ -212,6 +212,22 @@
     },
   };
 
+  /* ---------- small status note that survives the app redrawing the page ---------- */
+  function toast(m) {
+    var t = document.getElementById("lh-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "lh-toast";
+      t.setAttribute("role", "status");
+      t.setAttribute("style", "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:30;max-width:min(92vw,420px);padding:12px 16px;border-radius:14px;background:var(--ink,#343432);color:var(--bg,#F1F1EF);font:600 .9rem var(--body,system-ui,sans-serif);box-shadow:0 8px 24px rgba(0,0,0,.18)");
+      document.body.appendChild(t);
+    }
+    t.textContent = m;
+    t.style.display = "block";
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.style.display = "none"; }, /…$/.test(m) ? 60000 : 6000);
+  }
+
   /* ---------- Backup page: sign out, import ---------- */
   document.addEventListener("click", function (e) {
     var t = e.target.closest && e.target.closest('[data-lh="signout"]');
@@ -234,8 +250,7 @@
   document.addEventListener("change", function (e) {
     var t = e.target;
     if (!t || !t.matches || !t.matches('[data-lh="import"]') || !t.files[0]) return;
-    var msg = document.getElementById("lh-import-msg");
-    var say = function (m) { if (msg) msg.textContent = m; };
+    var say = function (m) { var el = document.getElementById("lh-import-msg"); if (el) el.textContent = m; toast(m); };
     var reader = new FileReader();
     reader.onload = function () {
       var j;
@@ -253,7 +268,8 @@
       var uidv = session.user.id, i = 0;
       (function next() {
         if (i >= rows.length) { say("Imported " + rows.length + " items."); return; }
-        var chunk = rows.slice(i, i + 200).map(function (r) { return { user_id: uidv, coll: r.coll, id: r.id, data: r.data }; });
+        var now = new Date().toISOString();
+        var chunk = rows.slice(i, i + 200).map(function (r) { return { user_id: uidv, coll: r.coll, id: r.id, data: r.data, updated_at: now }; });
         sb.from("docs").upsert(chunk, { onConflict: "user_id,coll,id" }).then(function (r) {
           if (r.error) { say("Import stopped: " + r.error.message); return; }
           chunk.forEach(function (x) { (cache[x.coll] = cache[x.coll] || {})[x.id] = x.data; emit(x.coll); });

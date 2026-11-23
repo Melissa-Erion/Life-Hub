@@ -446,27 +446,43 @@ input[type=text]:focus,input[type=date]:focus,input[type=time]:focus,select:focu
 }
 /* header rows with arrows: let the title shrink and keep buttons together */
 .spread{flex-wrap:wrap}.spread .row{flex-wrap:nowrap}
+/* Phone navigation: bottom bar with five main pages + More */
+#more,#sheet{display:none}
+@media (max-width:760px){
+  nav{position:fixed;top:auto;left:0;right:0;bottom:0;height:auto;z-index:20;flex-direction:row;align-items:stretch;justify-content:space-between;overflow:visible;gap:0;padding:0 4px env(safe-area-inset-bottom,0px);border-right:0;border-bottom:0;border-top:1px solid var(--line);background:var(--bg)}
+  nav a:not(.m),nav #theme{display:none}
+  nav a.m,nav #more{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:15px 2px 13px;font-family:var(--display);font-weight:800;font-size:.64rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:none;border:0;border-top:2px solid transparent;border-radius:0;cursor:pointer}
+  nav a.m[aria-current="page"],nav #more.on{color:var(--ink);border-top-color:var(--ink)}
+  nav a[href="#today"]{order:1}nav a[href="#plan"]{order:2}nav a[href="#goals"]{order:3}nav a[href="#fit"]{order:4}nav a[href="#social"]{order:5}nav #more{order:6}
+  nav #more{display:flex}
+  main{padding-bottom:110px}
+  #sheet.open{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:fixed;left:12px;right:12px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:21;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  #sheet a,#sheet button{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--shade,var(--bg));color:var(--ink);text-decoration:none;font-family:var(--display);font-weight:800;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+  #sheet a[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+}
 </style>
 </head>
 <body>
 <div class="shell">
   <nav aria-label="Views">
     <div class="brand">Life Hub</div>
-    <a href="#today">Today</a>
-    <a href="#plan">Planner</a>
+    <a class="m" href="#today">Today</a>
+    <a class="m" href="#plan">Planner</a>
     <a href="#areas">Explore</a>
-    <a href="#goals">Goals</a>
-    <a href="#fit">Fitness</a>
+    <a class="m" href="#goals">Goals</a>
+    <a class="m" href="#fit">Fitness</a>
     <a href="#biz">Business</a>
-    <a href="#social">Social</a>
+    <a class="m" href="#social">Social</a>
     <a href="#money">Money</a>
     <a href="#log">Journal</a>
     <a href="#claude">Claude</a>
     <a href="#learn">Library</a>
     <a href="#find">Search</a>
     <a href="#data">Backup</a>
+    <button type="button" id="more" class="morebtn" aria-expanded="false" aria-controls="sheet">More</button>
     <button type="button" id="theme" class="themebtn" aria-label="Switch between light and dark mode"></button>
   </nav>
+  <div id="sheet" role="menu" aria-label="More pages"></div>
   <main id="view"><div class="empty">Loading your hub…</div></main>
 </div>
 <script>
@@ -1625,6 +1641,25 @@ function start(){
   window.claude.use("sample").then(function(s){if(s){ask=s;render()}});
   window.claude.use("user").then(function(u){if(u&&u.can)return u.can("data.write").then(function(v){if(v===false){canWrite=false;render()}})}).catch(function(){});
 }
+(function(){
+  var nav=document.querySelector("nav"),more=document.getElementById("more"),sh=document.getElementById("sheet"),th=document.getElementById("theme");
+  if(!nav||!more||!sh)return;
+  var links=[].slice.call(nav.querySelectorAll("a:not(.m)"));
+  links.forEach(function(a){var c=a.cloneNode(true);c.setAttribute("role","menuitem");sh.appendChild(c)});
+  var tb=document.createElement("button");tb.type="button";tb.textContent="Light / dark";tb.addEventListener("click",function(){if(th)th.click()});sh.appendChild(tb);
+  function mark(){
+    var h=location.hash||"#today",other=false;
+    [].forEach.call(sh.querySelectorAll("a"),function(a){if(a.getAttribute("href")===h){a.setAttribute("aria-current","page");other=true}else a.removeAttribute("aria-current")});
+    more.classList.toggle("on",other)
+  }
+  function set(o){sh.classList.toggle("open",o);more.setAttribute("aria-expanded",o?"true":"false")}
+  more.addEventListener("click",function(e){e.stopPropagation();set(!sh.classList.contains("open"))});
+  sh.addEventListener("click",function(e){if(e.target.closest("a"))set(false)});
+  document.addEventListener("click",function(e){if(!sh.contains(e.target)&&e.target!==more)set(false)});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")set(false)});
+  window.addEventListener("hashchange",function(){mark();set(false)});
+  mark();
+})();
 start();
 </script>
 </body>

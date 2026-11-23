@@ -1,8 +1,8 @@
-const {JSDOM}=require('jsdom');const fs=require('fs');
+const {JSDOM}=require('jsdom');const TODAY=new Date().toLocaleDateString('en-CA');const fs=require('fs');
 const html=fs.readFileSync(__dirname+'/../app/index.html','utf8').replace(/<link[^>]*>/g,'');
 const lib=JSON.parse(fs.readFileSync(__dirname+'/../app/library.json','utf8'));
 const paths=JSON.parse(fs.readFileSync(__dirname+'/../app/pathways.json','utf8'));
-const data={goals:{g1:{title:"Test goal",area:"marketing",sub:"SEO",status:"active",milestones:[{t:"m",done:true}],steps:[{t:"s",done:false}],points:[{d:"2026-11-01",v:10},{d:"2026-11-10",v:14}]}},skills:{s1:{name:"brand-voice",status:"needed",does:"x",area:"marketing"}},improve:{},log:{l1:{date:"2026-11-22",kind:"win",text:"hi",area:"marketing"}},resources:{},paths:{},habits:{h1:{name:"Walk",days:{}}},journal:{"2026-11-20":{date:"2026-11-20",text:"old"}}};
+const data={goals:{g1:{title:"Test goal",area:"marketing",sub:"SEO",status:"active",milestones:[{t:"m",done:true}],steps:[{t:"s",done:false}],points:[{d:"2026-11-01",v:10},{d:"2026-11-10",v:14}]}},skills:{s1:{name:"brand-voice",status:"needed",does:"x",area:"marketing"}},improve:{},log:{l1:{date:TODAY,kind:"win",text:"hi",area:"marketing"}},resources:{},paths:{},habits:{h1:{name:"Walk",days:{}}},journal:{"2026-11-20":{date:"2026-11-20",text:"old"}}};
 const tax={groups:[{id:"g",name:"Business",areas:[{id:"marketing",name:"Marketing",subs:Object.keys(lib.marketing)},{id:"custom",name:"Custom",subs:["X"]}]}]};
 const writes=[];let saved=null;const resnaps=[];
 const db={doc:p=>({onSnapshot:(n)=>{setTimeout(()=>n(p==='meta/taxonomy'?{exists:true,data:()=>tax}:{exists:false}),5)},set:async d=>writes.push([p,d])}),collection:c=>({onSnapshot:(n)=>{const emit=()=>n({docs:Object.keys(data[c]||{}).map(id=>({id,data:()=>data[c][id]}))});setTimeout(emit,5);resnaps.push(emit)},doc:id=>({set:async d=>writes.push([c+'/'+id,d]),delete:async()=>writes.push(['del',c+'/'+id])})})};
@@ -42,11 +42,11 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));const $=q=>w.document.querySelec
  w.location.hash='#fit';await wait(20);
  for(const t of ['training','body','nutrition','goals']){w.document.querySelector('[data-act="tog"][data-id="'+t+'"]').click();await wait(10);console.log('fit',t,$('#view').textContent.length)}
  const tg=(t)=>{w.document.querySelector('[data-act="tog"][data-id="'+t+'"]').click()};
- data.routines={r1:{name:'Lower A',ex:[{n:'Squat',sets:'4',reps:'8',w:''}]}};data.workouts={w1:{date:'2026-11-22',name:'Lower A',ex:[{n:'Squat',sets:'4',reps:'8',w:''}],done:false}};data.checkins={k1:{date:'2026-11-22',done:false,weight:'',photos:[]}};
- data.meals={'2026-11-22':{date:'2026-11-22',m:[{items:[{n:'Rice',g:'100',kcal:130,p:2.7,c:28,f:0.3}]}]}};
+ data.routines={r1:{name:'Lower A',ex:[{n:'Squat',sets:'4',reps:'8',w:''}]}};data.workouts={w1:{date:TODAY,name:'Lower A',ex:[{n:'Squat',sets:'4',reps:'8',w:''}],done:false}};data.checkins={k1:{date:TODAY,done:false,weight:'',photos:[]}};
+ data.meals={[TODAY]:{date:TODAY,m:[{items:[{n:'Rice',g:'100',kcal:130,p:2.7,c:28,f:0.3}]}]}};
  // force re-snapshot by reloading collections
  resnaps.forEach(f=>f());await wait(10);tg('training');await wait(10);console.log('training-with-data',$('#view').textContent.includes('Lower A'));
- w.document.querySelector('[data-act="f-day"][data-d="2026-11-22"]').click();await wait(10);console.log('wo-open',!!$('#wo-w1'),!!$('form[data-form="sched-day"]'));const xi=$('#wo-w1 [data-ex]');xi.value='5';xi.dispatchEvent(new w.Event('change',{bubbles:true}));sub('form[data-form="sched-day"]');$('[data-act="w-close"]').click();await wait(10);console.log('rt-collapsed',!$('form[data-form="sched"]'));$('[data-act="rt-tog"]').click();await wait(10);console.log('rt-open',!!$('form[data-form="sched"]'));sub('form[data-form="sched"]');
+ w.document.querySelector('[data-act="f-day"][data-d="'+TODAY+'"]').click();await wait(10);console.log('wo-open',!!$('#wo-w1'),!!$('form[data-form="sched-day"]'));const xi=$('#wo-w1 [data-ex]');xi.value='5';xi.dispatchEvent(new w.Event('change',{bubbles:true}));sub('form[data-form="sched-day"]');$('[data-act="w-close"]').click();await wait(10);console.log('rt-collapsed',!$('form[data-form="sched"]'));$('[data-act="rt-tog"]').click();await wait(10);console.log('rt-open',!!$('form[data-form="sched"]'));sub('form[data-form="sched"]');
  tg('body');await wait(10);w.document.querySelector('[data-act="c-open"]').click();await wait(10);console.log('ci-open',!!$('#ci-open'),!!$('#ci-photo'));
  tg('nutrition');await wait(10);console.log('nutri',$('#view').textContent.includes('Rice'),$('#view').textContent.includes('Training day'));
  w.location.hash='#today';await wait(20);console.log('home-agenda',$('#view').textContent.includes('Lower A'),$('#view').textContent.includes('Body check-in'));w.location.hash='#fit';await wait(20);
@@ -56,7 +56,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));const $=q=>w.document.querySelec
  $('#fd-n-0').value='Chicken';$('#fd-g-0').value='150';$('#fd-k-0').value='250';$('#fd-p-0').value='46';sub('form[data-form="food"]');
  resnaps.forEach(f=>f());await wait(10);console.log('savedmeal-ui',!!$('[data-act="sm-save"]'),!!$('[data-act="n-copy"]'));$('#sn-0').value='Lunch';$('[data-act="sm-save"]').click();await wait(10);
  console.log('macros',w.document.querySelectorAll('.macro').length,w.document.querySelectorAll('form[data-form="food"]').length);
- data.clients={c1:{name:'Acme',status:'lead',next:'call',nextDate:'2026-01-01'}};data.projects={p1:{name:'Site',status:'planned',client:'c1'}};data.trackers={t1:{name:'Revenue',tab:'biz',points:[{d:'2026-11-01',v:1},{d:'2026-11-08',v:3}]}};data.acts={a1:{date:'2026-11-22',type:'call',note:'x'}};
+ data.clients={c1:{name:'Acme',status:'lead',next:'call',nextDate:'2026-01-01'}};data.projects={p1:{name:'Site',status:'planned',client:'c1'}};data.trackers={t1:{name:'Revenue',tab:'biz',points:[{d:'2026-11-01',v:1},{d:'2026-11-08',v:3}]}};data.acts={a1:{date:TODAY,type:'call',note:'x'}};
  w.location.hash='#biz';await wait(20);
  for(const t of ['clients','projects','activity','numbers','goals']){w.document.querySelector('[data-act="tog"][data-id="'+t+'"]').click();await wait(10);console.log('biz',t,$('#view').textContent.length)}
  w.document.querySelector('[data-act="tog"][data-id="clients"]').click();await wait(10);$('#cl-name').value='Beta';sub('form[data-form="client"]');

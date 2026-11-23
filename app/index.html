@@ -466,6 +466,11 @@ main{min-width:0}
   .card > form.add > .f{flex:1 1 100% !important}
   .card > form.add > .btn{flex:1 1 100%}
 }
+/* No dots in the nav (Melissa's rule): the current page is shown by its darker text only */
+nav a[aria-current="page"]::after{display:none !important}
+@media (min-width:761px){nav a[aria-current="page"]{color:var(--ink);font-weight:900}}
+/* Smallest phones: tighter bottom-bar labels so they never touch */
+@media (max-width:360px){nav a.m,nav #more{font-size:.56rem;letter-spacing:.01em;padding-left:1px;padding-right:1px}}
 </style>
 </head>
 <body>

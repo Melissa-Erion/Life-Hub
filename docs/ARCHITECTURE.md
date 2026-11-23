@@ -10,7 +10,7 @@
 | `#goals` | `vGoals` | Goals with milestones, steps, result number, "plan with Claude" |
 | `#fit` | `vFit` | Training (schedule, saved workouts), Check-ins (fields, photos, table), Nutrition (targets, meals, macros), Goals |
 | `#biz` | `vBiz` | Clients (profile, documents, links, images, projects), Projects (overview, tasks, files, links, images), Invoices, Activity, Numbers, Goals |
-| `#social` | `vSocial` | Account tabs, platforms, and per platform: Feed preview, Pillars, Audience, Strategy, Analytics |
+| `#social` | `vSocial` | Account tabs, shared documents per account, platforms, and per platform: Feed preview, Analytics |
 | `#money` | `vMoney` | Budget, Savings, Net worth, Goals |
 | `#log` | `vLog` | Journal and wins/check-ins/lessons log |
 | `#claude` | `vClaude` | Skills (have / building / needed), improvement list |
@@ -33,13 +33,14 @@ Collections (`COLLS`): goals, skills, improve, log, resources, paths, habits, jo
 | `ci-fields` | Check-in fields template |
 | `budget`, `networth` | Money |
 | `social` | `{profiles:[{id,name}]}` — the Social account tabs (default one is `personal`) |
+| `sd-<profileId>` | `{docs:[{id,name,kind,date}]}` — documents uploaded for a Social account, shared by its platforms |
 
 Selected record shapes:
 
 - `clients` / `projects`: fields plus `docs:[{id,name,kind,date}]`, `links:[{t,u,date}]`, `imgs:[{id,name,date}]`. Projects carry `client` (id or empty).
 - `tasks`: `{date,text,time,done,goal?,project?}`.
 - `workouts` (scheduled sessions) vs `routines` (saved workouts); editing a routine syncs upcoming sessions (`syncRoutine`).
-- `socials` (one doc per platform): `{profile,name,created,posts:[{img:{id,name},caption,pillar,status,date}],pillars:[{t,d}],personas:[{name,who,pains,wants,where}],research,competitors,strategy:{goal,position,mix,rhythm,cta,measure,notes},stats:[{date,followers,reach,engagement,visits,clicks}]}`.
+- `socials` (one doc per platform): `{profile,name,created,posts:[{img:{id,name},caption,status,date}],stats:[{date,followers,reach,engagement,visits,clicks}]}`. Pillars, personas, research and strategy were removed in favour of account documents (`plans/sd-<profileId>`).
 
 For a relational database, the nested arrays (posts, stats, docs, links, images, milestones, steps) are the natural candidates to become their own tables.
 

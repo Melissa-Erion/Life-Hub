@@ -217,6 +217,20 @@
     var t = e.target.closest && e.target.closest('[data-lh="signout"]');
     if (t) sb.auth.signOut();
   });
+  document.addEventListener("submit", function (e) {
+    var f = e.target;
+    if (!f || !f.matches || !f.matches('[data-lh-form="setpw"]')) return;
+    e.preventDefault();
+    var i = document.getElementById("lh-newpw"), m = document.getElementById("lh-pw-msg");
+    if (!i || !m) return;
+    if (i.value.length < 10) { m.textContent = "Use at least 10 characters."; return; }
+    m.textContent = "Saving…";
+    sb.auth.updateUser({ password: i.value }).then(function (res) {
+      if (res.error) { m.textContent = "Could not set the password: " + res.error.message; return; }
+      i.value = "";
+      m.textContent = "Password set. You can now sign in with your email and password.";
+    });
+  });
   document.addEventListener("change", function (e) {
     var t = e.target;
     if (!t || !t.matches || !t.matches('[data-lh="import"]') || !t.files[0]) return;

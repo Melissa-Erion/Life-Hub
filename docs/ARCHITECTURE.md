@@ -39,6 +39,8 @@ Selected record shapes:
 - `clients` / `projects`: fields plus `docs:[{id,name,kind,date}]`, `links:[{t,u,date}]`, `imgs:[{id,name,date}]`. Projects carry `client` (id or empty).
 - `tasks`: `{date,text,time,done,goal?,project?}`.
 - `workouts` (scheduled sessions) vs `routines` (saved workouts); editing a routine syncs upcoming sessions (`syncRoutine`).
+- `socials` overview: one extra doc per account tab, id `ov-<profileId>`, `{overview:true, profile, name:"Overview", pillars, personas, research, competitors, strategy}`. It holds the shared plan for every platform in that tab; it is created on first save (`socSave`) and is excluded from platform lists. Shared pillars also appear in each platform's post pillar dropdown.
+- Persona boxes: `personas[i].fields:[{l,v}]` (editable headings). Older personas keep `who/pains/wants/where` until first edited, then switch to `fields` (`pfMat`).
 - `socials` (one doc per platform): `{profile,name,created,posts:[{img:{id,name},caption,pillar,status,date}],pillars:[{t,d}],personas:[{name,who,pains,wants,where}],research,competitors,strategy:{goal,position,mix,rhythm,cta,measure,notes},stats:[{date,followers,reach,engagement,visits,clicks}]}`.
 
 For a relational database, the nested arrays (posts, stats, docs, links, images, milestones, steps) are the natural candidates to become their own tables.

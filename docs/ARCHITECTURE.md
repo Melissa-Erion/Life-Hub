@@ -38,7 +38,7 @@ Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, h
 
 Selected record shapes:
 
-- `courses`: `{name,provider,url,status:active|paused|done,target,next,why,lessons:[{t,done}],notes:[{date,text}],docs:[{id,name,date}],links,imgs,created}`.
+- `courses`: `{name,provider,url,status:active|paused|done,target,next,why,lessons:[{t,done}],notes:[{date,text}],docs:[{id,name,date}],links,imgs,chats:[{q,a,date,saved}],created}`. `chats` keeps the last 20 Ask Claude answers (`coAsk` sends the course details, lessons and newest notes as context).
 - Study sessions are `tasks` with `course` (course id), `topic`, `dur` (minutes) and `series` when repeated, so they show on the Today calendar, agenda and Planner like any task.
 
 - `clients` / `projects`: fields plus `docs:[{id,name,kind,date}]`, `links:[{t,u,date}]`, `imgs:[{id,name,date}]`. Projects carry `client` (id or empty).

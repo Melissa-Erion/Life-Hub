@@ -508,6 +508,10 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .boxacts .btn{padding:4px 12px;font-size:.8rem;text-align:center}
 /* Save bar at the bottom of cards with writing boxes */
 .savebar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
+/* Ask Claude answers inside a course card: no shaded box inside a shaded box */
+.chat{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+details.earlier summary{cursor:pointer;padding:6px 0}
+details.earlier .chat{margin-top:10px}
 </style>
 </head>
 <body>
@@ -1457,6 +1461,36 @@ function vStudy(){
   if(fin.length){h+=vh("Finished",fin.length+" course"+(fin.length===1?"":"s"));h+='<div class="card"><div class="grid g3 fill">'+fin.map(courseBox).join("")+'</div></div>'}
   return h;
 }
+var COAI={quiz:["Quiz me","Write a 5-question quiz on the lessons I have finished and my notes. Number the questions. Put all the answers after the questions, under a line that says Answers."],summary:["Summarise my notes","Summarise my notes into the key ideas I should remember, as a short numbered list. End with one line on what to focus on next."],next:["What next?","Based on where I left off and the lessons still to do, tell me exactly what to study in my next session and how to spend 60 minutes on it, step by step."]};
+function chatBox(x,i,id){return'<div class="chat"><div class="spread" style="align-items:baseline"><b style="overflow-wrap:anywhere">'+esc(x.q)+'</b><span class="small muted" style="flex:none">'+esc(x.date||"")+'</span></div><div class="ai">'+esc(x.a)+'</div><div class="row" style="gap:6px">'+(x.saved?'<span class="pill done">Saved to notes</span>':'<button class="btn" style="padding:4px 12px;font-size:.8rem" data-act="co-ai-save" data-id="'+id+'" data-i="'+i+'">Save to notes</button>')+'<button class="btn ghost" style="padding:4px 12px;font-size:.8rem" data-act="co-ai-rm" data-id="'+id+'" data-i="'+i+'">'+(ui.confirm==="coai/"+id+"/"+i?"Confirm remove":"Remove")+'</button></div></div>'}
+function courseAI(c,id){
+  var chats=c.chats||[],st=ui.coAI&&ui.coAI.cid===id?ui.coAI:null,busy=!!(st&&st.loading);
+  var h=vh("Ask Claude","Uses this course and your notes");
+  h+='<div class="card">';
+  if(!ask)return h+'<p class="muted">Claude is not connected in this view.</p></div>';
+  h+='<form class="add" data-form="co-ask" data-id="'+id+'"><div class="f" style="flex:1 1 100%"><label for="ca-q">Your question</label><textarea id="ca-q" class="keep" rows="3" placeholder="For example: explain this lesson in simpler words, or give me an example"></textarea></div><button class="btn primary" type="submit"'+(busy?" disabled":"")+'>'+(busy?"Thinking…":"Ask")+'</button></form>';
+  h+='<div class="row">'+Object.keys(COAI).map(function(k){return'<button class="btn" data-act="co-ai" data-k="'+k+'" data-id="'+id+'"'+(busy?" disabled":"")+'>'+COAI[k][0]+'</button>'}).join("")+'</div>';
+  if(busy)h+='<div class="chat"><b>'+esc(st.q)+'</b><div class="ai">Thinking…</div></div>';
+  if(st&&st.error)h+='<p class="banner">'+esc(st.error)+'</p>';
+  if(chats.length){h+=chatBox(chats[chats.length-1],chats.length-1,id);
+    if(chats.length>1)h+='<details class="earlier"'+(ui.confirm&&ui.confirm.indexOf("coai/"+id+"/")===0&&ui.confirm!=="coai/"+id+"/"+(chats.length-1)?" open":"")+'><summary class="small">Earlier questions ('+(chats.length-1)+')</summary>'+chats.slice(0,-1).map(function(x,i){return{x:x,i:i}}).reverse().map(function(o){return chatBox(o.x,o.i,id)}).join("")+'</details>'}
+  else if(!busy)h+='<p class="small muted">Answers are kept here, so you can come back to them. Each question uses a small amount of your Claude credit.</p>';
+  return h+'</div>';
+}
+function coAsk(id,label,req){
+  var c=S.courses[id];if(!ask||!c||(ui.coAI&&ui.coAI.loading))return;
+  ui.coAI={cid:id,loading:true,q:label};render();
+  var l=courseLessons(c);
+  var ctx="Course: "+c.name+(c.provider?" ("+c.provider+")":"")+"\nWhy I am taking it: "+(c.why||"not given")+"\nWhere I left off: "+(c.next||"not given")+"\nLessons done: "+(l.filter(function(x){return x.done}).map(function(x){return x.t}).join("; ")||"none yet")+"\nLessons still to do: "+(l.filter(function(x){return !x.done}).map(function(x){return x.t}).join("; ")||"none listed")+"\nMy notes, newest first:\n"+((c.notes||[]).slice(-15).reverse().map(function(n){return"- "+(n.date||"")+": "+String(n.text||"").slice(0,600)}).join("\n")||"none yet");
+  var p="You are a patient, practical study coach helping me with a course I am taking. Today is "+today()+". Use the course details and my notes below. Write in plain language with short paragraphs or simple numbered lists. Do not use markdown symbols such as # or **. If my notes do not cover something, answer from general knowledge and say so in one short line. Keep it under 300 words unless I ask for more.\n\n"+ctx+"\n\nMy request: "+req;
+  ask(p,{cache:false}).then(function(r){
+    var t=String(r&&r.text||"").trim();
+    if(!t){ui.coAI={cid:id,error:"Claude did not send an answer. Try again."};render();return}
+    var cc=S.courses[id]&&clone(S.courses[id]);if(!cc){ui.coAI=null;render();return}
+    (cc.chats=cc.chats||[]).push({q:label,a:t,date:today()});if(cc.chats.length>20)cc.chats=cc.chats.slice(-20);
+    write("courses",id,cc).then(function(){ui.coAI=null;render()});
+  },function(e){ui.coAI={cid:id,error:failMsg(e)};render()});
+}
 function vCourse(c,id){
   var td=today(),l=courseLessons(c),dn=l.filter(function(x){return x.done}).length,docs=c.docs||[],st=studyTasks(id),up=st.filter(function(t){return !t.done&&t.date>=td}).sort(byWhen),done=st.filter(function(t){return t.done}),cu=coUrl(c.url);
   var h='<div><button class="btn ghost back" data-act="co-close">← Back to courses</button></div>';
@@ -1469,6 +1503,7 @@ function vCourse(c,id){
   h+='<div class="card"><form class="add" data-form="cnote" data-id="'+id+'"><div class="f" style="flex:1 1 100%"><label for="cn-text">New note</label><textarea id="cn-text" class="keep" rows="4" placeholder="Key ideas, questions, things to try"></textarea></div><button class="btn primary" type="submit">Add note</button></form>';
   h+=(c.notes||[]).length?'<div class="grid g2">'+(c.notes||[]).map(function(n,i){return{n:n,i:i}}).reverse().map(function(o){return'<div class="mini"><div class="spread" style="align-items:center"><span class="small muted">'+esc(o.n.date?fmt(o.n.date,{weekday:"short",month:"short",day:"numeric",year:"numeric"}):"")+'</span><button class="btn ghost" aria-label="Remove note" data-act="co-rm" data-k="notes" data-id="'+id+'" data-i="'+o.i+'">'+(ui.confirm==="cor/notes/"+id+"/"+o.i?"Confirm":"×")+'</button></div><textarea rows="4" aria-label="Note" data-cnote="'+id+'" data-i="'+o.i+'">'+esc(o.n.text||"")+'</textarea></div>'}).join("")+'</div>':'<p class="muted">No notes yet.</p>';
   h+='</div>';
+  h+=courseAI(c,id);
   h+=vh("Study plan",up.length+" upcoming · shows on your calendar");
   h+='<div class="card">'+studyForm(id)+studyList(up)+'</div>';
   h+=vh("Files",docs.length+" uploaded");
@@ -1543,6 +1578,7 @@ view.addEventListener("submit",function(ev){
   else if(k==="course"){var cn=val("co-name");if(!cn)return;write("courses",newId(),{name:cn,provider:val("co-prov"),url:val("co-url"),target:val("co-target"),status:"active",lessons:[],notes:[],docs:[],links:[],imgs:[],next:"",why:"",created:today()});["co-name","co-prov","co-url","co-target"].forEach(function(i){var el=document.getElementById(i);if(el)el.value=""});flash("Course added.")}
   else if(k==="lesson"){var lt2=val("ls-t");if(!lt2||!S.courses[id])return;document.getElementById("ls-t").value="";var lc=clone(S.courses[id]);(lc.lessons=lc.lessons||[]).push({t:lt2,done:false});savedNote(write("courses",id,lc))}
   else if(k==="cnote"){var cnt=document.getElementById("cn-text"),cnv=cnt&&cnt.value.trim();if(!cnv||!S.courses[id])return;cnt.value="";var nc=clone(S.courses[id]);(nc.notes=nc.notes||[]).push({date:today(),text:cnv});savedNote(write("courses",id,nc))}
+  else if(k==="co-ask"){var qa=document.getElementById("ca-q"),qv=qa&&qa.value.trim();if(!qv)return;qa.value="";coAsk(id,qv,qv)}
   else if(k==="study"){var scid=id||val("st-course"),sc=S.courses[scid];if(!sc)return;var sd1=val("st-date")||today(),rp2=val("st-rep"),tp=val("st-topic"),dts2=[sd1],ssid=newId();if(rp2){var rn3=parseInt(rp2.slice(1),10);for(var r3=1;r3<rn3;r3++)dts2.push(addDays(sd1,(rp2[0]==="w"?7:1)*r3))}var tpe=document.getElementById("st-topic");if(tpe)tpe.value="";writeSeq(dts2.map(function(dx){return["tasks",newId(),{date:dx,text:"Study: "+sc.name+(tp?" · "+tp:""),topic:tp,course:scid,time:val("st-time"),dur:val("st-dur")||"60",goal:"",done:false,series:rp2?ssid:""}]})).then(function(){ui.msg=dts2.length>1?"Planned "+dts2.length+" study sessions. They are on your calendar.":"Planned. It is on your calendar on "+sd1+".";render()})}
   else if(k==="task"){var tt=val("tk-text");if(!tt)return;var t0=f.getAttribute("data-d"),rp=val("tk-rep"),dts=[t0],sid=newId();
     if(rp){var rn2=parseInt(rp.slice(1),10),ru=rp[0];for(var ri=1;ri<rn2;ri++){if(ru==="m"){var rm=pd(t0);rm.setMonth(rm.getMonth()+ri);dts.push(ymd(rm))}else dts.push(addDays(t0,(ru==="w"?7:1)*ri))}}
@@ -1611,7 +1647,7 @@ if(a==="g-check"){var gg=goal(did),key=e.getAttribute("data-list"),i=+e.getAttri
 
 view.addEventListener("click",function(ev){
   var b=ev.target.closest("button[data-act]");
-  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"))){ui.confirm=null;if(!b){render();return}}
+  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"))){ui.confirm=null;if(!b){render();return}}
   if(!b)return;
   var a=b.getAttribute("data-act"),id=b.getAttribute("data-id");
   if(a==="back"){var pv=ui.prev;ui.prev=null;ui.skipPrev=true;location.hash="#"+(pv||"today");return}
@@ -1653,6 +1689,9 @@ if(a==="rt-del"){if(ui.confirm!=="routines/"+id){ui.confirm="routines/"+id;rende
   if(a==="c-close"){ui.ci=null;render();return}
   if(a==="cih"){ui.cih=!ui.cih;render();window.scrollTo(0,0);return}
   if(a==="co-open"){ui.course=id;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
+if(a==="co-ai"){var qk=b.getAttribute("data-k");if(COAI[qk])coAsk(id,COAI[qk][0],COAI[qk][1]);return}
+if(a==="co-ai-save"){var asi=+b.getAttribute("data-i"),acc=S.courses[id]&&clone(S.courses[id]);if(!acc||!acc.chats||!acc.chats[asi])return;var ach=acc.chats[asi];(acc.notes=acc.notes||[]).push({date:today(),text:"From Claude, "+ach.q+":\n"+ach.a});ach.saved=true;savedNote(write("courses",id,acc));return}
+if(a==="co-ai-rm"){var ari=+b.getAttribute("data-i"),ark="coai/"+id+"/"+ari;if(ui.confirm!==ark){ui.confirm=ark;render();return}ui.confirm=null;var arc=S.courses[id]&&clone(S.courses[id]);if(arc&&arc.chats){arc.chats.splice(ari,1);write("courses",id,arc)}render();return}
 if(a==="co-close"){ui.course=null;render();window.scrollTo(0,0);return}
 if(a==="co-rm"){var cok=b.getAttribute("data-k"),coi=+b.getAttribute("data-i"),cokey="cor/"+cok+"/"+id+"/"+coi;if(ui.confirm!==cokey){ui.confirm=cokey;render();return}ui.confirm=null;var coc=S.courses[id]&&clone(S.courses[id]);if(coc&&coc[cok]){coc[cok].splice(coi,1);write("courses",id,coc)}render();return}
 if(a==="co-del"){if(ui.confirm!=="codel/"+id){ui.confirm="codel/"+id;render();return}ui.confirm=null;var cup=studyTasks(id).filter(function(t){return !t.done&&t.date>=today()});ui.course=null;remove("courses",id);rmAll("tasks",cup);render();return}

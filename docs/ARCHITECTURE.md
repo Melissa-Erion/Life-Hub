@@ -96,7 +96,7 @@ Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached thr
 
 | Collection | Shape |
 |---|---|
-| `f_people` | `{name, kind:"person"|"pet", role, birthday, order, ...profile fields}` (fields in `PFIELDS`) |
+| `f_people` | `{name, kind:"person"|"pet", birthday, order, ...profile fields}` (sections and fields in `PSECT`) |
 | `f_events` | `{title, date, time, end, where, notes, who:[personId], yearly, by}`; birthdays come from `f_people` |
 | `f_habits` | `{name, per, owner:user_id, days:{date:1}}`; only the owner can tick |
 | `f_chores` | `{name, who:personId, freq:"daily"|"weekly"|"biweekly"|"monthly", day, notes, log:{periodKey:{by,byName,date}}, last}`; `chKey()` gives the current period key, so ticks reset by themselves |
@@ -108,8 +108,12 @@ Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached thr
 | `f_hmoney` | `{kind:"in"|"out", date, amount, cat, what, by, byName, bill?}` |
 | `f_hsave` | `{name, target, saved, due, log:[{date,amount,by,byName}]}` |
 | `f_gifts` | `{forName, occasion, idea, price, where, status:"idea"|"bought"|"wrapped"|"given", year}`; private gifts use the same shape in the personal `gifts` collection |
+| `f_lists` | `{name, kind:"groceries"|"shopping"|"todo"|"other", ord}` |
+| `f_items` | `{list, t, done, qty, who, date, time, at, by}`; `list` is `list:<id>` or `trip:<id>:book|pack|plan`, one record per item so two people adding at once never clash |
+| `f_trips` | `{name, kind:"trip"|"holiday", status, start, end, where, stay, who:[personId], notes}`; shown on the calendar for every day it spans |
+| `f_checkins` | id is the week start (Sunday); `{answers:{user_id:{wins,hard,need,next}}, together, decisions, done:{date,by,byName}}` |
 | `f_feedback` | `{kind:"bug"|"idea", page, text, by, byName, date, at, status, reply, device, width}`; the space owner sets status and reply |
 
 Personal goals with `shared:true` are readable by family members (RLS policy on `docs`) and appear in `S.pgoals`.
 
-Pages: `#family` (tabs Overview, Goals, Chores, Home upkeep, Money, Gifts, Habits, Calendar, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.
+Pages: `#family` (tabs Overview, Check-in, Calendar, Lists, Goals, Chores, Home upkeep, Money, Gifts, Trips, Habits, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.

@@ -590,6 +590,20 @@ label.gshare{gap:8px;align-items:center}
 label.gshare input{width:17px;height:17px;accent-color:var(--ink)}
 .fform{display:flex;flex-direction:column;gap:10px}
 .fform > .f{flex:none}
+.fav{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--bg);display:inline-flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:1.1rem;flex:none}
+.fav.pet{background:none;color:var(--ink);border:2px solid var(--ink)}
+.fav.big{width:72px;height:72px;font-size:1.8rem}
+.fphead{display:flex;gap:12px;align-items:center}
+.fphead > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fpfacts{display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);padding-top:8px}
+.fpcard{min-height:170px}
+.fphero{display:flex;flex-direction:row;gap:18px;align-items:center}
+.fphero-main{flex:1;min-width:0}
+.fpsecs .card h3{margin:0 0 10px}
+.fpfields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fpfields .f.wide{grid-column:1/-1}
+.fday{font-weight:700;color:var(--muted);margin-top:10px;text-transform:uppercase;letter-spacing:.06em;font-size:.72rem}
+@media (max-width:760px){.fphero{flex-direction:column;align-items:flex-start}.fpfields{grid-template-columns:1fr}}
 .fgrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
 .fgrow .fchk{flex:1 1 200px}
 .fgrow select{flex:0 1 150px;font-size:.86rem;padding:5px 8px;height:34px}
@@ -664,7 +678,7 @@ nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
 /* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
-var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals","f_hcats","f_hbills","f_hmoney","f_hsave","f_gifts"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
+var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals","f_hcats","f_hbills","f_hmoney","f_hsave","f_gifts","f_items","f_lists","f_trips","f_checkins"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
 function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
 var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses","gifts"];
@@ -1941,11 +1955,13 @@ function famOn(ds){
   list("f_todos").forEach(function(t){if(!t.done&&t.due===ds)out.push({kind:"job",j:"todo",it:t,t:"~"})});
   list("f_maint").forEach(function(m){if(mNext(m)===ds)out.push({kind:"job",j:"maint",it:m,t:"~"})});
   list("f_hbills").forEach(function(b){if(b.day&&+ds.slice(8)===+b.day&&!(b.paid||{})[ds.slice(0,7)]&&ds>=today().slice(0,7)+"-01")out.push({kind:"job",j:"bill",it:b,t:"~"})});
+  list("f_trips").forEach(function(t){if(t.start&&t.start<=ds&&(t.end||t.start)>=ds)out.push({kind:"trip",tr:t,t:"!"})});
   famPeople().forEach(function(p){if(p.birthday&&p.birthday.slice(-5)===ds.slice(5)){var a=p.birthday.length>=10?+ds.slice(0,4)-+p.birthday.slice(0,4):null;out.push({kind:"bday",p:p,t:"",age:a})}});
   return out.sort(function(a,b){return(a.kind==="bday"?"0":"1"+(a.t||"99")).localeCompare(b.kind==="bday"?"0":"1"+(b.t||"99"))});
 }
 function famUpcoming(n){var r=[];for(var i=0;i<n;i++){var ds=addDays(today(),i);famOn(ds).forEach(function(x){x.d=ds;r.push(x)})}return r}
 function famItemBox(x,full){
+  if(x.kind==="trip"){var tr=x.tr;return'<div class="mini"><span class="small muted">'+esc(whenWord(x.d))+' · '+(tr.kind==="holiday"?"Holiday":"Trip")+(x.d===tr.start?"":" (day "+(daysTo(x.d)-daysTo(tr.start)+1)+")")+'</span><b style="overflow-wrap:anywhere">'+esc(tr.name)+'</b><span class="small muted">'+esc(tr.where||tripWhen(tr))+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="ft-open" data-id="'+tr.id+'">Open</button></div>'}
   if(x.kind==="job"){var it=x.it,tm=x.j==="todo",bl=x.j==="bill";return'<div class="mini"><span class="small muted">'+esc(whenWord(x.d))+' · '+(tm?"To-do":bl?"Bill due":"Home upkeep")+'</span><b style="overflow-wrap:anywhere">'+esc(tm?it.text:it.name)+'</b><span class="small muted">'+(bl?cash(num(it.amount))+(it.auto?" · automatic":""):esc(pName(it.who)||"Anyone"))+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="'+(tm?"chores":bl?"money":"upkeep")+'" data-pre="'+(tm?"ftd-":bl?"":"fm-")+'" data-id="'+(bl?"":it.id)+'">Open</button></div>'}
   if(x.kind==="bday")return'<div class="mini fbday"><span class="small muted">'+esc(whenWord(x.d))+'</span><b>'+esc(x.p.name)+"’s birthday"+'</b><span class="small">'+(x.age!=null&&x.age>0?"Turns "+x.age:"Birthday")+'</span></div>';
   var e=x.ev,who=(e.who||[]).map(function(id){return S.f_people[id]&&S.f_people[id].name}).filter(Boolean);
@@ -2005,12 +2021,14 @@ function vFamily(){
   var h='<div class="head"><h1>'+esc(FAM?FAM.name:"Family")+'</h1><p class="muted">Your shared space. Each of you keeps a private hub; this page is the part you both see.</p></div>';
   if(!FAM)return h+'<div class="empty">The family space is not available in this view.</div>';
   if(!ui.fam)ui.fam="home";
-  h+=tog("fam",[["home","Overview"],["goals","Goals"],["chores","Chores"],["upkeep","Home upkeep"],["money","Money"],["gifts","Gifts"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
+  h+=tog("fam",[["home","Overview"],["checkin","Check-in"],["cal","Calendar"],["lists","Lists"],["goals","Goals"],["chores","Chores"],["upkeep","Home upkeep"],["money","Money"],["gifts","Gifts"],["trips","Trips"],["habits","Habits"],["people","People and pets"]]);
   var t=ui.fam;
   if(t==="home"){
     var up=famUpcoming(14);
     h+=vh("Next two weeks",up.length?up.length+" coming up":"");
     h+=up.length?'<div class="grid g3 fill">'+up.slice(0,9).map(function(x){return famItemBox(x,false)}).join("")+'</div>'+(up.length>9?'<p class="small muted">'+(up.length-9)+' more on the Calendar.</p>':""):'<div class="empty small">Nothing in the next two weeks. Add events on the Calendar tab.</div>';
+    var cw=S.f_checkins[wkStart(today())]||{},cmine=((cw.answers||{})[famMe()]||{});
+    h+=vh("This week");h+='<div class="grid g3 fill"><div class="mini"><b>Weekly check-in</b><span class="small">'+(cw.done?"Done "+esc(whenAgo(cw.done.date))+".":Object.keys(cmine).length?"You have started your answers.":"Not done yet this week.")+'</span>'+(cw.together?'<span class="small muted">Together: '+esc(cw.together)+'</span>':"")+'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="checkin">Open check-in</button></div>'+list("f_lists").sort(function(a,b){return(a.ord||9)-(b.ord||9)}).slice(0,2).map(function(L){var op=fItems("list:"+L.id).filter(function(x){return !x.done});return'<div class="mini"><b>'+esc(L.name)+'</b><span class="small">'+(op.length?op.length+" on the list: "+esc(op.slice(0,3).map(function(x){return x.t}).join(", "))+(op.length>3?"…":""):"Nothing on the list.")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fl-open-tab" data-id="'+L.id+'">Open list</button></div>'}).join("")+'</div>';
     h+=vh("Home","chores, to-dos and upkeep");h+=famHomeTiles();h+='<div class="row"><button class="btn" data-act="fam-tab" data-tab="chores">Open chores</button><button class="btn" data-act="fam-tab" data-tab="upkeep">Open home upkeep</button></div>';
     h+=vh("Habits","consistency");h+=famScoreTiles();
     h+=famGoalsHtml();
@@ -2044,21 +2062,10 @@ function vFamily(){
     h+=vh("Coming up","next 60 days");
     h+=up2.length?'<div class="grid g3 fill">'+up2.map(function(x){return famItemBox(x,false)}).join("")+'</div>':'<div class="empty small">Nothing planned yet.</div>';
   }
-  if(t==="people"){
-    var pp=famPeople(),op=ui.fperson&&S.f_people[ui.fperson]?ui.fperson:null;
-    if(op){var p=Object.assign({id:op},S.f_people[op]),fs=PFIELDS[p.kind==="pet"?"pet":"person"],ag=ageOf(p.birthday),nb=nextBday(p.birthday);
-      h+='<div class="row"><button class="btn ghost" data-act="fp-close">← All people and pets</button></div>';
-      h+=vh(esc(p.name),p.kind==="pet"?"pet":"family");
-      h+='<div class="card"><div class="row fwrap"><div class="f"><label for="fp-name">Name</label><input type="text" id="fp-name" data-fp="name" data-id="'+op+'" value="'+esc(p.name)+'"></div><div class="f"><label for="fp-role">'+(p.kind==="pet"?"Kind of pet":"Who they are")+'</label><input type="text" id="fp-role" data-fp="role" data-id="'+op+'" value="'+esc(p.role||"")+'" placeholder="'+(p.kind==="pet"?"Dog, cat":"Mom, son, grandma")+'"></div><div class="f"><label for="fp-bday">Birthday</label><input type="date" id="fp-bday" data-fp="birthday" data-id="'+op+'" value="'+esc(p.birthday||"")+'"></div></div>';
-      if(p.birthday)h+='<p class="small muted">'+(ag!=null?"Age "+ag+" · ":"")+'Next birthday '+esc(whenWord(nb))+(daysTo(nb)>6?" ("+daysTo(nb)+" days)":"")+'. Birthdays show on the Calendar automatically.</p>';
-      h+='<div class="grid g2">'+fs.map(function(f){return'<div class="f"><label for="fp-'+f[0]+'">'+f[1]+'</label><textarea id="fp-'+f[0]+'" rows="3" data-fp="'+f[0]+'" data-id="'+op+'">'+esc(p[f[0]]||"")+'</textarea></div>'}).join("")+'</div>';
-      h+='<p class="small muted">Changes save when you leave a box.</p><div class="row"><button class="btn danger" data-act="del" data-coll="f_people" data-id="'+op+'">'+(ui.confirm==="f_people/"+op?"Confirm: delete "+esc(p.name):"Delete profile")+'</button></div></div>';
-    }else{
-      h+=vh("People and pets",pp.length+" profiles");
-      h+=pp.length?'<div class="grid g3 fill">'+pp.map(function(p){var ag=ageOf(p.birthday),nb=nextBday(p.birthday);return'<div class="mini fperson"><b>'+esc(p.name)+'</b><span class="small muted">'+esc(p.role||(p.kind==="pet"?"Pet":"Family"))+(ag!=null?" · age "+ag:"")+'</span><span class="small">'+(nb?"Birthday "+esc(whenWord(nb))+(daysTo(nb)>6?" · in "+daysTo(nb)+" days":""):"No birthday added")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fp-open" data-id="'+p.id+'">Open profile</button></div>'}).join("")+'</div>':'<div class="empty small">No profiles yet.</div>';
-      h+='<div class="card"><form class="add" data-form="fperson"><input type="text" id="fpn-name" class="keep" placeholder="Name" aria-label="Name" style="flex:2 1 180px"><select id="fpn-kind" class="keep" aria-label="Person or pet" style="flex:1 1 140px"><option value="person">Person</option><option value="pet">Pet</option></select><button class="btn" type="submit">Add profile</button></form></div>';
-    }
-  }
+  if(t==="people")h+=famPeopleView();
+  if(t==="checkin")h+=famCheckinView();
+  if(t==="lists")h+=famListsView();
+  if(t==="trips")h+=famTripsView();
   return h;
 }
 function vHelp(){
@@ -2080,7 +2087,7 @@ function vHelp(){
   return h;
 }
 function famClick(a,id,b){
-  if(choresClick(a,id,b)||goalsClick(a,id,b)||moneyClick(a,id,b))return true;
+  if(choresClick(a,id,b)||goalsClick(a,id,b)||moneyClick(a,id,b)||s6Click(a,id,b))return true;
   if(a==="fc-day"){ui.fday=b.getAttribute("data-d");ui.fm=ui.fday.slice(0,7);ui.fev=null;render();return true}
   if(a==="fc-mv"){var r=pd((ui.fm||(ui.fday||today()).slice(0,7))+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.fm=ymd(r).slice(0,7);render();return true}
   if(a==="fc-now"){ui.fday=today();ui.fm=null;render();return true}
@@ -2095,7 +2102,7 @@ function famClick(a,id,b){
   return false;
 }
 function famSubmit(k,id,f){
-  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f)||moneySubmit(k,id,f))return true;
+  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f)||moneySubmit(k,id,f)||s6Submit(k,id,f))return true;
   if(k==="fhab"){var n=val("fh-name");if(!n||!famMe())return true;write("f_habits",newId(),{name:n,per:+val("fh-per")||7,owner:famMe(),days:{},created:today()}).then(function(ok){if(ok)flash("Added. Your family can see it.")});document.getElementById("fh-name").value="";return true}
   if(k==="fev"){var p=id?"fe-ed-":"fe-new-",t=val(p+"title"),d=val(p+"date");if(!t||!d){ui.err="Add what it is and the date.";render();return true}
     var who=[].slice.call(f.querySelectorAll('input[name="'+p+'who"]:checked')).map(function(x){return x.value}),en=val(p+"end");
@@ -2104,13 +2111,13 @@ function famSubmit(k,id,f){
     var nid=id||newId();ui.fev=null;ui.fday=d;ui.fm=d.slice(0,7);savedNote(write("f_events",nid,old));
     if(!id)["title","time","end","where","notes"].forEach(function(s){var e=document.getElementById(p+s);if(e)e.value=""});
     render();return true}
-  if(k==="fperson"){var nm=val("fpn-name");if(!nm)return true;var nid2=newId();write("f_people",nid2,{name:nm,kind:val("fpn-kind")||"person",role:"",birthday:"",order:9,created:today()}).then(function(ok){if(ok){ui.fperson=nid2;render()}});document.getElementById("fpn-name").value="";return true}
+  if(k==="fperson"){var nm=val("fpn-name");if(!nm)return true;var nid2=newId();write("f_people",nid2,{name:nm,kind:val("fpn-kind")||"person",birthday:"",order:9,created:today()}).then(function(ok){if(ok){ui.fperson=nid2;render()}});document.getElementById("fpn-name").value="";return true}
   if(k==="fb"){var tx=val("fb-text");if(!tx){ui.err="Write a few words about it first.";render();return true}
     write("f_feedback",newId(),{kind:val("fb-kind")||"bug",page:val("fb-page"),text:tx,by:famMe(),byName:memName(famMe()),date:today(),at:new Date().toISOString(),status:"new",device:navigator.userAgent.slice(0,160),width:innerWidth}).then(function(ok){if(ok)flash("Sent. Thank you.")});document.getElementById("fb-text").value="";return true}
   return false;
 }
 function famChange(e){
-  if(choresChange(e)||goalsChange(e)||moneyChange(e))return true;
+  if(choresChange(e)||goalsChange(e)||moneyChange(e)||s6Change(e))return true;
   if(e.hasAttribute("data-fhtoday")){var hid=e.getAttribute("data-fhtoday"),x=S.f_habits[hid];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};if(e.checked)x.days[dayStr(0)]=1;else delete x.days[dayStr(0)];write("f_habits",hid,x);return true}
   if(e.hasAttribute("data-fp")){var pid=e.getAttribute("data-id"),fk=e.getAttribute("data-fp"),pr=S.f_people[pid];if(!pr)return true;var v=e.value.trim();if(fk==="name"&&!v){render();return true}pr=clone(pr);pr[fk]=v;savedNote(write("f_people",pid,pr));return true}
   if(e.hasAttribute("data-fbset")){var fid=e.getAttribute("data-id"),fr=S.f_feedback[fid];if(!fr)return true;fr=clone(fr);fr[e.getAttribute("data-fbset")]=e.value.trim();savedNote(write("f_feedback",fid,fr));return true}
@@ -2359,6 +2366,161 @@ function moneyChange(e){
   if(e.hasAttribute("data-gst")){var coll=e.getAttribute("data-coll"),gid=e.getAttribute("data-gst"),g=S[coll]&&S[coll][gid];if(!g)return true;g=clone(g);delete g.secret;g.status=e.value;savedNote(write(coll,gid,g));return true}
   return false;
 }
+/* ---------- family profiles ---------- */
+var PSECT={person:[
+ ["Health",[["allergies","Allergies"],["meds","Medications"],["doctor","Family doctor"],["dentist","Dentist"],["health","Health notes",1]]],
+ ["Sizes",[["top","Tops"],["bottom","Bottoms"],["shoe","Shoes"],["sizenotes","Other sizes"]]],
+ ["School and activities",[["school","School and grade"],["teacher","Teacher"],["activities","Activities and schedule",1]]],
+ ["Favourites",[["favfood","Favourite foods"],["loves","Loves",1],["dislikes","Does not like",1],["giftideas","Gift ideas",1]]],
+ ["Notes",[["notes","Anything else",1]]]],
+pet:[
+ ["About",[["type","Type"],["breed","Breed"],["colour","Colour and markings"],["chip","Microchip number"]]],
+ ["Health",[["vet","Vet"],["vaccines","Vaccines due"],["meds","Medications"],["allergies","Allergies"],["health","Health notes",1]]],
+ ["Care",[["food","Food and amount"],["feeding","Feeding times"],["walks","Walks and exercise"],["grooming","Grooming"],["sitter","Sitter or boarding"]]],
+ ["Notes",[["notes","Anything else",1]]]]};
+function avatar(p,big){return'<span class="fav'+(p.kind==="pet"?" pet":"")+(big?" big":"")+'" aria-hidden="true">'+esc((p.name||"?").trim().charAt(0).toUpperCase())+'</span>'}
+function pAgeLine(p){var ag=ageOf(p.birthday),nb=nextBday(p.birthday);if(!p.birthday)return"No birthday added";return(ag!=null?(ag===0?"Under 1":"Age "+ag)+" · ":"")+"birthday "+(daysTo(nb)===0?"today":whenWord(nb)+(daysTo(nb)>6?" (in "+daysTo(nb)+" days)":""))}
+function profCard(p){
+  var facts=(p.kind==="pet"?[["type",""],["breed",""],["vet","Vet: "],["meds","Meds: "]]:[["allergies","Allergies: "],["meds","Meds: "],["school",""],["shoe","Shoe: "]]).filter(function(f){return p[f[0]]}).slice(0,2);
+  return'<div class="mini fpcard"><div class="fphead">'+avatar(p)+'<div><b>'+esc(p.name)+'</b><span class="small muted">'+esc(pAgeLine(p))+'</span></div></div>'+(facts.length?'<div class="fpfacts">'+facts.map(function(f){return'<span class="small">'+esc(f[1]+p[f[0]])+'</span>'}).join("")+'</div>':'<span class="small muted">Nothing filled in yet.</span>')+'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fp-open" data-id="'+p.id+'">Open profile</button></div>';
+}
+function profDetail(op){
+  var p=Object.assign({id:op},S.f_people[op]),secs=PSECT[p.kind==="pet"?"pet":"person"],filled=0,tot=0;
+  secs.forEach(function(s){s[1].forEach(function(f){tot++;if(p[f[0]])filled++})});
+  var h='<div class="row"><button class="btn ghost" data-act="fp-close">← All profiles</button></div>';
+  h+='<div class="card fphero">'+avatar(p,true)+'<div class="fphero-main"><div class="row fwrap"><div class="f" style="flex:2 1 200px"><label for="fp-name">Name</label><input type="text" id="fp-name" data-fp="name" data-id="'+op+'" value="'+esc(p.name)+'"></div><div class="f" style="flex:1 1 160px"><label for="fp-bday">Birthday</label><input type="date" id="fp-bday" data-fp="birthday" data-id="'+op+'" value="'+esc(p.birthday||"")+'"></div></div><p class="small muted" style="margin:6px 0 0">'+esc(pAgeLine(p))+' · '+filled+' of '+tot+' details filled in. Birthdays show on the Calendar and Gifts tab.</p></div></div>';
+  h+='<div class="grid g2 fpsecs">'+secs.map(function(s){return'<div class="card"><h3>'+s[0]+'</h3><div class="fpfields">'+s[1].map(function(f){var id="fp-"+f[0];return'<div class="f'+(f[2]?" wide":"")+'"><label for="'+id+'">'+f[1]+'</label>'+(f[2]?'<textarea id="'+id+'" rows="2" data-fp="'+f[0]+'" data-id="'+op+'">'+esc(p[f[0]]||"")+'</textarea>':'<input type="text" id="'+id+'" data-fp="'+f[0]+'" data-id="'+op+'" value="'+esc(p[f[0]]||"")+'">')+'</div>'}).join("")+'</div></div>'}).join("")+'</div>';
+  h+='<p class="small muted">Changes save when you leave a box. Both of you can see and edit profiles.</p><div class="row"><button class="btn danger" data-act="del" data-coll="f_people" data-id="'+op+'">'+(ui.confirm==="f_people/"+op?"Confirm: delete "+esc(p.name):"Delete profile")+'</button></div>';
+  return h;
+}
+function famPeopleView(){
+  var op=ui.fperson&&S.f_people[ui.fperson]?ui.fperson:null;if(op)return profDetail(op);
+  var pp=famPeople(),ps=pp.filter(function(p){return p.kind!=="pet"}),pt=pp.filter(function(p){return p.kind==="pet"});
+  var h=vh("People",ps.length+" profiles");
+  h+=ps.length?'<div class="grid g3 fill">'+ps.map(profCard).join("")+'</div>':'<div class="empty small">No people yet.</div>';
+  h+=vh("Pets",pt.length+" profiles");
+  h+=pt.length?'<div class="grid g3 fill">'+pt.map(profCard).join("")+'</div>':'<div class="empty small">No pets yet.</div>';
+  h+='<div class="card"><form class="add" data-form="fperson"><input type="text" id="fpn-name" class="keep" placeholder="Name" aria-label="Name" style="flex:2 1 180px"><select id="fpn-kind" class="keep" aria-label="Person or pet" style="flex:1 1 140px"><option value="person">Person</option><option value="pet">Pet</option></select><button class="btn" type="submit">Add profile</button></form></div>';
+  return h;
+}
+/* ---------- shared items (lists, packing, trip plans) ---------- */
+function fItems(k){return list("f_items").filter(function(x){return x.list===k}).sort(function(a,b){return((a.date||"")+(a.time||"")+(a.at||"")).localeCompare((b.date||"")+(b.time||"")+(b.at||""))})}
+function lkey(k){return k.replace(/[^a-z0-9]/gi,"_")}
+function itemsHtml(k,o){
+  o=o||{};var it=fItems(k),open=it.filter(function(x){return !x.done}),dn=it.filter(function(x){return x.done}),q=lkey(k);
+  var row=function(x){return'<div class="fgrow'+(x.done?" isdone":"")+'"><label class="fchk"><input type="checkbox" data-fick="'+x.id+'"'+(x.done?" checked":"")+'><b>'+esc(x.t)+'</b></label>'+(x.qty?'<span class="small muted">'+esc(x.qty)+'</span>':"")+(x.date&&o.date?'<span class="small muted">'+esc(x.time||"")+'</span>':"")+(x.who?'<span class="small muted">'+esc(pName(x.who))+'</span>':"")+'<button class="btn ghost" aria-label="Remove" data-act="fi-rm" data-id="'+x.id+'">×</button></div>'};
+  var h='<div class="col">';
+  if(o.date){var days={};open.concat(dn).forEach(function(x){(days[x.date||""]=days[x.date||""]||[]).push(x)});var dk=Object.keys(days).sort();if(!dk.length)h+='<p class="small muted">'+esc(o.empty||"Nothing yet.")+'</p>';dk.forEach(function(d){h+='<div class="fday small">'+(d?esc(pd(d).toLocaleDateString("en-CA",{weekday:"long",month:"short",day:"numeric"})):"Any day")+'</div>'+days[d].map(row).join("")})}
+  else{if(!it.length)h+='<p class="small muted">'+esc(o.empty||"Nothing yet.")+'</p>';h+=open.map(row).join("");if(dn.length)h+='<div class="fday small">Ticked ('+dn.length+')</div>'+dn.map(row).join("")}
+  h+='<form class="add" data-form="fitem" data-list="'+esc(k)+'">'+(o.date?'<input type="date" id="fi-'+q+'-d" class="keep" aria-label="Day" value="'+esc(o.d0||"")+'" style="flex:1 1 140px"><input type="time" id="fi-'+q+'-tm" class="keep" aria-label="Time" style="flex:0 1 110px">':"")+'<input type="text" id="fi-'+q+'-t" class="keep" placeholder="'+esc(o.ph||"Add an item")+'" aria-label="'+esc(o.ph||"Add an item")+'" style="flex:3 1 180px">'+(o.qty?'<input type="text" id="fi-'+q+'-q" class="keep" placeholder="How many" aria-label="How many" style="flex:0 1 100px">':"")+(o.who?'<select id="fi-'+q+'-w" class="keep" aria-label="Who" style="flex:1 1 120px">'+pOpts("","Anyone")+'</select>':"")+'<button class="btn" type="submit">Add</button></form>';
+  if(dn.length&&!o.date)h+='<button class="btn ghost" style="align-self:flex-start" data-act="fi-clear" data-list="'+esc(k)+'">'+(ui.confirm==="ficlear/"+k?"Confirm: clear "+dn.length+" ticked":"Clear ticked items")+'</button>';
+  return h+'</div>';
+}
+/* ---------- lists ---------- */
+var LKIND=[["groceries","Groceries"],["shopping","Shopping"],["todo","To do"],["other","Other"]];
+function famListsView(){
+  var lo=ui.flo&&S.f_lists[ui.flo]?ui.flo:null;
+  if(lo){var L=S.f_lists[lo],k="list:"+lo,it=fItems(k);
+    var h='<div class="row"><button class="btn ghost" data-act="fl-close">← All lists</button></div>'+vh(esc(L.name),it.filter(function(x){return !x.done}).length+" left");
+    h+='<div class="card">'+itemsHtml(k,{qty:L.kind==="groceries"||L.kind==="shopping",ph:"Add to "+L.name,empty:"Empty list."})+'</div>';
+    h+='<div class="card"><div class="row fwrap"><div class="f"><label for="fl-name">List name</label><input type="text" id="fl-name" data-fl="name" data-id="'+lo+'" value="'+esc(L.name)+'"></div><div class="f"><label for="fl-kind">Type</label><select id="fl-kind" data-fl="kind" data-id="'+lo+'">'+LKIND.map(function(x){return'<option value="'+x[0]+'"'+(L.kind===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("")+'</select></div></div><div class="row" style="margin-top:10px"><button class="btn danger" data-act="del" data-coll="f_lists" data-id="'+lo+'">'+(ui.confirm==="f_lists/"+lo?"Confirm: delete list":"Delete list")+'</button></div></div>';
+    return h}
+  var ls=list("f_lists").sort(function(a,b){return(a.ord||9)-(b.ord||9)||a.name.localeCompare(b.name)});
+  var h=vh("Shared lists",ls.length+" lists");
+  h+='<p class="small muted">Lists you both add to. Tick things off as you go; ticked items stay until you clear them.</p>';
+  h+=ls.length?'<div class="grid g3 fill">'+ls.map(function(L){var it=fItems("list:"+L.id),op=it.filter(function(x){return !x.done});return'<div class="mini"><div class="spread"><b>'+esc(L.name)+'</b><span class="pill">'+op.length+' left</span></div><span class="small muted">'+esc((LKIND.filter(function(x){return x[0]===L.kind})[0]||LKIND[3])[1])+'</span><span class="small">'+(op.length?esc(op.slice(0,4).map(function(x){return x.t}).join(", "))+(op.length>4?"…":""):"Nothing left on it.")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fl-open" data-id="'+L.id+'">Open</button></div>'}).join("")+'</div>':'<div class="empty small">No lists yet.</div>';
+  h+='<div class="card"><form class="add" data-form="flist"><input type="text" id="fln-name" class="keep" placeholder="New list, for example Costco" aria-label="List name" style="flex:2 1 200px"><select id="fln-kind" class="keep" aria-label="Type" style="flex:1 1 140px">'+LKIND.map(function(x){return'<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'</select><button class="btn" type="submit">Add list</button></form>'+(ls.length?"":'<div class="row" style="margin-top:10px"><button class="btn primary" data-act="fl-starter">Start with Groceries and Shopping lists</button></div>')+'</div>';
+  return h;
+}
+/* ---------- trips and holidays ---------- */
+var TST=[["idea","Idea"],["planning","Planning"],["booked","Booked"],["done","Done"]];
+var PACK=["Toothbrushes and toothpaste","Phone chargers","Medications","Pyjamas","Swimsuits","Snacks for the drive","Passports or ID","Health cards","Pet food and leash","Sunscreen","Jackets","Shoes"];
+function tripWhen(t){if(!t.start)return"No dates yet";var s=pd(t.start).toLocaleDateString("en-CA",{month:"short",day:"numeric"}),e=t.end&&t.end!==t.start?" to "+pd(t.end).toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"}):", "+t.start.slice(0,4);var n=daysTo(t.start);return s+e+(n>0?" · in "+n+" day"+(n>1?"s":""):n<=0&&(t.end||t.start)>=today()?" · happening now":"")}
+function tripCard(t){
+  var bk=fItems("trip:"+t.id+":book"),pk=fItems("trip:"+t.id+":pack"),who=(t.who||[]).map(pName).filter(Boolean);
+  return'<div class="mini" id="ftr-'+t.id+'"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(t.name)+'</b><span class="pill">'+esc((TST.filter(function(x){return x[0]===t.status})[0]||TST[0])[1])+'</span></div><span class="small muted">'+(t.kind==="holiday"?"Holiday":"Trip")+(t.where?" · "+esc(t.where):"")+'</span><span class="small">'+esc(tripWhen(t))+'</span>'+(who.length?'<span class="small muted">'+esc(who.join(", "))+'</span>':"")+'<span class="small muted">'+(bk.length?bk.filter(function(x){return x.done}).length+" of "+bk.length+" booked or done":"Nothing to book yet")+(pk.length?" · "+pk.filter(function(x){return x.done}).length+" of "+pk.length+" packed":"")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="ft-open" data-id="'+t.id+'">Open</button></div>';
+}
+function tripDetail(id){
+  var t=Object.assign({id:id},S.f_trips[id]),who=t.who||[];
+  var h='<div class="row"><button class="btn ghost" data-act="ft-close">← All trips and holidays</button></div>'+vh(esc(t.name),tripWhen(t));
+  h+='<div class="card"><div class="row fwrap"><div class="f" style="flex:2 1 220px"><label for="ftd-name">Name</label><input type="text" id="ftd-name" data-ft="name" data-id="'+id+'" value="'+esc(t.name)+'"></div><div class="f"><label for="ftd-kind">Type</label><select id="ftd-kind" data-ft="kind" data-id="'+id+'"><option value="trip"'+(t.kind!=="holiday"?" selected":"")+'>Trip</option><option value="holiday"'+(t.kind==="holiday"?" selected":"")+'>Holiday at home</option></select></div><div class="f"><label for="ftd-status">Status</label><select id="ftd-status" data-ft="status" data-id="'+id+'">'+TST.map(function(x){return'<option value="'+x[0]+'"'+((t.status||"idea")===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("")+'</select></div></div>';
+  h+='<div class="row fwrap"><div class="f"><label for="ftd-start">From</label><input type="date" id="ftd-start" data-ft="start" data-id="'+id+'" value="'+esc(t.start||"")+'"></div><div class="f"><label for="ftd-end">To</label><input type="date" id="ftd-end" data-ft="end" data-id="'+id+'" value="'+esc(t.end||"")+'"></div><div class="f"><label for="ftd-where">Where</label><input type="text" id="ftd-where" data-ft="where" data-id="'+id+'" value="'+esc(t.where||"")+'"></div><div class="f"><label for="ftd-stay">Staying at</label><input type="text" id="ftd-stay" data-ft="stay" data-id="'+id+'" value="'+esc(t.stay||"")+'"></div></div>';
+  h+='<fieldset class="fwho"><legend>Who is going</legend>'+famPeople().map(function(p){return'<label><input type="checkbox" data-ftwho="'+p.id+'" data-id="'+id+'"'+(who.indexOf(p.id)>=0?" checked":"")+'> '+esc(p.name)+'</label>'}).join("")+'</fieldset>';
+  h+='<div class="f" style="margin-top:10px"><label for="ftd-notes">Notes</label><textarea id="ftd-notes" rows="3" data-ft="notes" data-id="'+id+'" placeholder="Ideas, addresses, confirmation numbers, budget">'+esc(t.notes||"")+'</textarea></div><p class="small muted">Changes save when you leave a box. Dates show on the Calendar.</p></div>';
+  h+='<div class="grid g2"><div class="card"><div class="head"><h2>To book and do</h2><p class="muted small">Flights, hotel, pet sitter, time off.</p></div>'+itemsHtml("trip:"+id+":book",{who:true,ph:"Add something to book or do",empty:"Nothing yet."})+'</div>';
+  h+='<div class="card"><div class="head"><h2>Packing</h2><p class="muted small">Give each thing an owner so nothing gets missed.</p></div>'+itemsHtml("trip:"+id+":pack",{who:true,ph:"Add something to pack",empty:"Nothing yet."})+(fItems("trip:"+id+":pack").length?"":'<button class="btn ghost" style="align-self:flex-start;margin-top:8px" data-act="ft-pack" data-id="'+id+'">Add the usual packing list</button>')+'</div></div>';
+  h+='<div class="card"><div class="head"><h2>Plan by day</h2><p class="muted small">What is happening each day, with times if you have them.</p></div>'+itemsHtml("trip:"+id+":plan",{date:true,d0:t.start||"",ph:"What is happening",empty:"No plans yet."})+'</div>';
+  h+='<div class="row"><button class="btn danger" data-act="ft-del" data-id="'+id+'">'+(ui.confirm==="ftdel/"+id?"Confirm: delete this and its lists":"Delete")+'</button></div>';
+  return h;
+}
+function famTripsView(){
+  if(ui.ftr&&S.f_trips[ui.ftr])return tripDetail(ui.ftr);
+  var ts=list("f_trips"),t0=today(),up=ts.filter(function(t){return t.status!=="done"&&t.start&&(t.end||t.start)>=t0}).sort(function(a,b){return a.start.localeCompare(b.start)}),ideas=ts.filter(function(t){return t.status!=="done"&&!t.start}),past=ts.filter(function(t){return t.status==="done"||(t.start&&(t.end||t.start)<t0)}).sort(function(a,b){return(b.start||"").localeCompare(a.start||"")});
+  var h=vh("Coming up",up.length+" planned");
+  h+=up.length?'<div class="grid g3 fill">'+up.map(tripCard).join("")+'</div>':'<div class="empty small">Nothing planned with dates yet.</div>';
+  h+='<div class="card"><form class="add" data-form="ftrip"><input type="text" id="ftn-name" class="keep" placeholder="Camping trip, Christmas at home" aria-label="Name" style="flex:2 1 200px"><select id="ftn-kind" class="keep" aria-label="Type" style="flex:1 1 140px"><option value="trip">Trip</option><option value="holiday">Holiday at home</option></select><input type="date" id="ftn-start" class="keep" aria-label="From" style="flex:1 1 140px"><input type="date" id="ftn-end" class="keep" aria-label="To" style="flex:1 1 140px"><button class="btn" type="submit">Add</button></form></div>';
+  if(ideas.length)h+=vh("Ideas","no dates yet")+'<div class="grid g3 fill">'+ideas.map(tripCard).join("")+'</div>';
+  if(past.length)h+='<details class="earlier"><summary class="small">Past ('+past.length+')</summary><div class="grid g3 fill" style="margin-top:10px">'+past.map(tripCard).join("")+'</div></details>';
+  return h;
+}
+/* ---------- weekly check-in ---------- */
+var CIQ=[["wins","What went well this week?"],["hard","What was hard?"],["need","What do you need from each other this week?"],["next","What is coming up that we should plan for?"]];
+function ciWeek(){return ui.fck||wkStart(today())}
+function famCheckinView(){
+  var w=ciWeek(),we=addDays(w,6),c=S.f_checkins[w]||{},ans=c.answers||{},cur=w===wkStart(today());
+  var h='<div class="calhead" style="margin-top:6px"><h2>Week of '+esc(pd(w).toLocaleDateString("en-CA",{month:"long",day:"numeric"}))+'</h2><div class="row"><button class="btn ghost" data-act="ci-mv" data-n="-7" aria-label="Previous week">←</button><button class="btn" data-act="ci-now">This week</button><button class="btn ghost" data-act="ci-mv" data-n="7" aria-label="Next week"'+(cur?" disabled":"")+'>→</button></div></div>';
+  h+='<p class="small muted">Ten minutes once a week, best on a Sunday. Look at the week together, each answer the questions, and agree on one thing to do together.</p>';
+  var ch=list("f_chores"),stepsDone=0;list("f_goals").forEach(function(g){(g.steps||[]).forEach(function(s){if(s.done&&s.doneAt>=w&&s.doneAt<=we)stepsDone++})});
+  var tdDone=list("f_todos").filter(function(t){return t.done&&t.doneAt>=w&&t.doneAt<=we}).length;
+  h+=vh("The week in numbers");
+  h+='<div class="grid g4"><div class="tile"><b>'+(cur&&ch.length?ch.filter(chDone).length+"/"+ch.length:"–")+'</b><span>chores done this round</span></div><div class="tile"><b>'+tdDone+'</b><span>to-dos finished</span></div><div class="tile"><b>'+stepsDone+'</b><span>goal steps done</span></div>'+FAM.members.map(function(m){var sc=famScore(m.user_id);return'<div class="tile"><b>'+(sc==null?"–":sc+"%")+'</b><span>'+esc(m.name)+'’s habits, last 7 days</span></div>'}).join("")+'</div>';
+  var nx=famUpcoming(10).filter(function(x){return x.d>today()});
+  if(cur&&nx.length)h+='<div class="card"><h3 style="margin-top:0">Coming up</h3><p class="small">'+nx.slice(0,8).map(function(x){return esc(whenWord(x.d))+": "+esc(x.kind==="bday"?x.p.name+"’s birthday":x.kind==="trip"?x.tr.name:x.kind==="job"?(x.j==="bill"?x.it.name+" bill due":x.j==="maint"?x.it.name+" (home upkeep)":x.it.text):x.ev.title)}).join("<br>")+'</p></div>';
+  h+=vh("Talk it through");
+  h+='<div class="cols">'+FAM.members.slice().sort(function(a,b){return(b.me?1:0)-(a.me?1:0)}).map(function(m){var a=ans[m.user_id]||{};return'<div class="col card"><div class="row"><h3>'+esc(m.me?"Your answers":m.name)+'</h3></div>'+CIQ.map(function(q){return'<div class="f"><label'+(m.me?' for="ci-'+q[0]+'"':"")+'>'+q[1]+'</label>'+(m.me?'<textarea id="ci-'+q[0]+'" rows="2" data-ci="'+q[0]+'">'+esc(a[q[0]]||"")+'</textarea>':'<p class="small fnotes">'+(a[q[0]]?esc(a[q[0]]):'<span class="muted">Not answered yet.</span>')+'</p>')+'</div>'}).join("")+'</div>'}).join("")+'</div>';
+  h+='<div class="card"><div class="f"><label for="ci-together">One thing we will do together this week</label><input type="text" id="ci-together" data-cis="together" value="'+esc(c.together||"")+'"></div><div class="f" style="margin-top:10px"><label for="ci-decisions">Decisions and to-dos</label><textarea id="ci-decisions" rows="3" data-cis="decisions" placeholder="Anything you agreed on. Add jobs to the Chores tab so they do not get lost.">'+esc(c.decisions||"")+'</textarea></div>';
+  h+='<div class="row" style="margin-top:10px">'+(c.done?'<span class="pill">Done '+esc(c.done.date)+(c.done.byName?" · marked by "+esc(c.done.byName):"")+'</span><button class="btn ghost" data-act="ci-undo">Not done yet</button>':'<button class="btn primary" data-act="ci-done">We did our check-in</button>')+'</div><p class="small muted">Changes save when you leave a box.</p></div>';
+  var past=list("f_checkins").filter(function(x){return x.id<w&&x.done}).sort(function(a,b){return b.id.localeCompare(a.id)}).slice(0,12);
+  if(past.length)h+=vh("Earlier check-ins")+'<div class="grid g3 fill">'+past.map(function(x){return'<div class="mini"><b>Week of '+esc(pd(x.id).toLocaleDateString("en-CA",{month:"short",day:"numeric"}))+'</b>'+(x.together?'<span class="small">Together: '+esc(x.together)+'</span>':"")+(x.decisions?'<p class="small fnotes muted">'+esc(x.decisions.slice(0,140))+(x.decisions.length>140?"…":"")+'</p>':"")+'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="ci-go" data-id="'+x.id+'">Open</button></div>'}).join("")+'</div>';
+  return h;
+}
+function ciSave(fn){var w=ciWeek(),c=clone(S.f_checkins[w]||{week:w,answers:{}});fn(c);c.updated=today();return write("f_checkins",w,c)}
+/* ---------- handlers ---------- */
+function s6Click(a,id,b){
+  if(a==="fl-open"){ui.flo=id;render();window.scrollTo(0,0);return true}
+  if(a==="fl-open-tab"){ui.fam="lists";ui.flo=id;render();window.scrollTo(0,0);return true}
+  if(a==="fl-close"){ui.flo=null;render();return true}
+  if(a==="fl-starter"){writeSeq([["f_lists",newId(),{name:"Groceries",kind:"groceries",ord:1}],["f_lists",newId(),{name:"Shopping",kind:"shopping",ord:2}]]);return true}
+  if(a==="fi-rm"){if(fdb)fdb.collection("f_items").doc(id).delete().catch(function(){ui.err="That could not be removed.";render()});return true}
+  if(a==="fi-clear"){var k=b.getAttribute("data-list"),ck="ficlear/"+k;if(ui.confirm!==ck){ui.confirm=ck;render();return true}ui.confirm=null;fItems(k).filter(function(x){return x.done}).reduce(function(p,x){return p.then(function(){return fdb.collection("f_items").doc(x.id).delete()})},Promise.resolve()).then(function(){flash("Cleared.")});return true}
+  if(a==="ft-open"){ui.fam="trips";ui.ftr=id;if(current()!=="family")location.hash="#family";else render();window.scrollTo(0,0);return true}
+  if(a==="ft-close"){ui.ftr=null;render();return true}
+  if(a==="ft-pack"){var at=Date.now();writeSeq(PACK.map(function(t,i){return["f_items",newId(),{list:"trip:"+id+":pack",t:t,done:false,by:famMe(),at:new Date(at+i).toISOString()}]})).then(function(){flash("Added the usual list. Remove what you do not need.")});return true}
+  if(a==="ft-del"){var dk="ftdel/"+id;if(ui.confirm!==dk){ui.confirm=dk;render();return true}ui.confirm=null;ui.ftr=null;var its=list("f_items").filter(function(x){return x.list.indexOf("trip:"+id+":")===0});remove("f_trips",id).then(function(){return its.reduce(function(p,x){return p.then(function(){return fdb.collection("f_items").doc(x.id).delete()})},Promise.resolve())});render();return true}
+  if(a==="ci-mv"){var nw=addDays(ciWeek(),+b.getAttribute("data-n"));ui.fck=nw>wkStart(today())?null:nw;render();return true}
+  if(a==="ci-now"){ui.fck=null;render();return true}
+  if(a==="ci-go"){ui.fck=id;render();window.scrollTo(0,0);return true}
+  if(a==="ci-done"){ciSave(function(c){c.done={date:today(),by:famMe(),byName:memName(famMe())}}).then(function(ok){if(ok)flash("Check-in done. See you next week.")});return true}
+  if(a==="ci-undo"){ciSave(function(c){delete c.done});return true}
+  return false;
+}
+function s6Submit(k,id,f){
+  if(k==="fitem"){var L=f.getAttribute("data-list"),q=lkey(L),t=val("fi-"+q+"-t");if(!t)return true;var it={list:L,t:t,done:false,by:famMe(),at:new Date().toISOString()};
+    if(document.getElementById("fi-"+q+"-q"))it.qty=val("fi-"+q+"-q");if(document.getElementById("fi-"+q+"-w"))it.who=val("fi-"+q+"-w");if(document.getElementById("fi-"+q+"-d")){it.date=val("fi-"+q+"-d");it.time=val("fi-"+q+"-tm")}
+    write("f_items",newId(),it);["-t","-q","-tm"].forEach(function(s){var e=document.getElementById("fi-"+q+s);if(e)e.value=""});var tf=document.getElementById("fi-"+q+"-t");if(tf)tf.focus();return true}
+  if(k==="flist"){var n=val("fln-name");if(!n)return true;var nid=newId();write("f_lists",nid,{name:n,kind:val("fln-kind")||"other",ord:9,created:today()}).then(function(ok){if(ok){ui.flo=nid;render()}});document.getElementById("fln-name").value="";return true}
+  if(k==="ftrip"){var tn=val("ftn-name");if(!tn)return true;var st=val("ftn-start"),en=val("ftn-end"),tid=newId();write("f_trips",tid,{name:tn,kind:val("ftn-kind")||"trip",start:st,end:en&&en>=st?en:"",status:st?"planning":"idea",who:[],by:famMe(),created:today()}).then(function(ok){if(ok){ui.ftr=tid;render();window.scrollTo(0,0)}});document.getElementById("ftn-name").value="";return true}
+  return false;
+}
+function s6Change(e){
+  if(e.hasAttribute("data-fick")){var iid=e.getAttribute("data-fick"),x=S.f_items[iid];if(!x)return true;x=clone(x);x.done=e.checked;if(e.checked){x.doneBy=famMe();x.doneAt=today()}write("f_items",iid,x);return true}
+  if(e.hasAttribute("data-fl")){var lid=e.getAttribute("data-id"),L=S.f_lists[lid];if(!L)return true;L=clone(L);var v=e.value.trim();if(!v){render();return true}L[e.getAttribute("data-fl")]=v;savedNote(write("f_lists",lid,L));return true}
+  if(e.hasAttribute("data-ft")){var tid=e.getAttribute("data-id"),t=S.f_trips[tid];if(!t)return true;t=clone(t);var fk=e.getAttribute("data-ft"),tv=e.value.trim();if(fk==="name"&&!tv){render();return true}t[fk]=tv;if(t.end&&t.start&&t.end<t.start)t.end="";if(fk==="start"&&tv&&t.status==="idea")t.status="planning";savedNote(write("f_trips",tid,t));return true}
+  if(e.hasAttribute("data-ftwho")){var wid=e.getAttribute("data-id"),tw=S.f_trips[wid];if(!tw)return true;tw=clone(tw);var pid=e.getAttribute("data-ftwho");tw.who=(tw.who||[]).filter(function(z){return z!==pid});if(e.checked)tw.who.push(pid);write("f_trips",wid,tw);return true}
+  if(e.hasAttribute("data-ci")){var ck=e.getAttribute("data-ci"),cv=e.value.trim();savedNote(ciSave(function(c){c.answers=c.answers||{};(c.answers[famMe()]=c.answers[famMe()]||{})[ck]=cv}));return true}
+  if(e.hasAttribute("data-cis")){var sk=e.getAttribute("data-cis"),sv=e.value.trim();savedNote(ciSave(function(c){c[sk]=sv}));return true}
+  return false;
+}
 /* ---------- tour ---------- */
 var TOUR=[
  ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. The Family page is the one place you share. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
@@ -2366,7 +2528,7 @@ var TOUR=[
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
  ["log","Journal","One card per day. Press Add entry, write what happened and how you felt. Claude can read your entries and point out patterns over time, such as what drains you or what keeps you on track. Entries are private."],
- ["family","Family","The shared page. Overview shows the next two weeks, how the chores and home jobs are going, habit consistency and shared goals. Goals holds the goals you work on together: each step has an owner, and you can see everyone’s open steps at a glance. Chores holds the jobs that repeat (who does them, how often) and one-off to-dos. Home upkeep tracks jobs that come round every few months or once a year, like the furnace filter or winter tires, and works out when each is next due. Money is the shared household budget: categories, monthly bills you tick off when paid, money in and out, and savings you build together. Gifts keeps gift ideas for birthdays and Christmas; tick Keep private for a gift for each other. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
+ ["family","Family","The shared page, with a tab for each part of family life. Overview shows the next two weeks and how things are going. Check-in is a ten-minute weekly talk. Calendar holds events, birthdays, trips and bills. Lists are shared lists like groceries. Goals are the goals you work on together, with an owner for each step. Chores, Home upkeep, Money, Gifts and Trips do what they say. Habits are the habits you track where you can both see them. People and pets has a profile for everyone, with health, sizes, school and favourites. Gifts marked private are only seen by the person who added them."],
  ["areas","Explore","Ideas for what to work on. Life is split into areas such as money, health, home and career. Pick up to three focus areas, browse the goal ideas inside each one, and add the ones you like as goals."],
  ["goals","Goals","Every goal has a target, a date, steps and milestones, and a result number you record over time. Flags tell you when a goal needs something, such as a date or a scheduled next step. To show a goal on the Family page, open it and tick Show to family; otherwise it stays private."],
  ["fit","Fitness","Training: build workouts and schedule them over weeks. Check-ins: record weight, measurements and photos to see progress. Nutrition: daily meals and macro targets. Fitness goals sit in their own tab."],
@@ -2539,7 +2701,7 @@ if(a==="g-check"){var gg=goal(did),key=e.getAttribute("data-list"),i=+e.getAttri
 
 view.addEventListener("click",function(ev){
   var b=ev.target.closest("button[data-act]");
-  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="mod-rm"||b.getAttribute("data-act")==="cn-del"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"))){ui.confirm=null;if(!b){render();return}}
+  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="mod-rm"||b.getAttribute("data-act")==="cn-del"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"||b.getAttribute("data-act")==="fi-clear"||b.getAttribute("data-act")==="ft-del"))){ui.confirm=null;if(!b){render();return}}
   if(!b)return;
   var a=b.getAttribute("data-act"),id=b.getAttribute("data-id");
   if(famClick(a,id,b))return;
@@ -2638,7 +2800,7 @@ if(a==="soc-doc-rm"){var sdi=+b.getAttribute("data-i"),sdk2="socdoc/"+id+"/"+sdi
 if(a==="soc-rm"){var sk=b.getAttribute("data-k"),sri=+b.getAttribute("data-i"),skey="soc/"+sk+"/"+id+"/"+sri;if(ui.confirm!==skey){ui.confirm=skey;render();return}ui.confirm=null;if(sk==="posts")ui.socPost=null;socSave(id,function(d){if(d[sk])d[sk].splice(sri,1)});render();return}
 if(a==="soc-del-plat"){if(ui.confirm!=="socq/"+id){ui.confirm="socq/"+id;render();return}ui.confirm=null;ui.socq=null;ui.socPost=null;remove("socials",id);render();return}
 if(a==="soc-del-prof"){if(ui.confirm!=="socp/"+id){ui.confirm="socp/"+id;render();return}ui.confirm=null;list("socials").forEach(function(x){if(x.profile===id)remove("socials",x.id)});if(S.plans["sd-"+id])remove("plans","sd-"+id);savePlan("social",function(d){d.profiles=socProfiles().filter(function(x){return x.id!==id})});ui.socp="personal";ui.socq=null;ui.socPost=null;render();return}
-if(a==="tog"){var tkk=b.getAttribute("data-key");ui[tkk]=id;if(tkk==="biz"){ui.pj=null;ui.cl=null}if(tkk==="fam"){ui.fgo=null;ui.fperson=null;ui.fch=null;ui.fmx=null;ui.fev=null}if(tkk==="socp"){ui.socq=null;ui.socPost=null;ui.socAdd=null}if(tkk==="socq"){ui.socPost=null;ui.socAdd=null}render();return}
+if(a==="tog"){var tkk=b.getAttribute("data-key");ui[tkk]=id;if(tkk==="biz"){ui.pj=null;ui.cl=null}if(tkk==="fam"){ui.flo=null;ui.ftr=null;ui.fck=null;ui.fgo=null;ui.fperson=null;ui.fch=null;ui.fmx=null;ui.fev=null}if(tkk==="socp"){ui.socq=null;ui.socPost=null;ui.socAdd=null}if(tkk==="socq"){ui.socPost=null;ui.socAdd=null}render();return}
   if(a==="nw"){var nn=+b.getAttribute("data-n");ui.nw=nn===0?0:ui.nw+nn;render();return}
   if(a==="jumpx"){ui.scrollTo="grp-"+id;location.hash="#areas";return}
   if(a==="lib"){ui.lib=id||"";render();return}

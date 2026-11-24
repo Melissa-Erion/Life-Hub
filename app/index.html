@@ -1288,7 +1288,7 @@ function vClaude(){
   var sk=list("skills").sort(function(a,b){return a.name.localeCompare(b.name)});
   var h='<div class="head"><h1>Claude</h1><p class="muted">What Claude can already do for you, what it still needs, and what would make its results better.</p></div>';
   h+=vh("Working together");
-  h+='<div class="note"><h3>How we work on this together</h3><p class="small">In any chat, paste this page\'s link and say what you want: "check my Life Hub and tell me what to work on", "log this win", or "add a goal for this". Claude can read and update everything here. Buttons on this page that ask Claude work without leaving the hub.</p></div>';
+  h+='<div class="note"><h3>How we work on this together</h3><p class="small">Claude helps from inside the hub. Use Run mentor review on Today, Suggest a plan on a goal, Capability brief on an area in Explore, Draft a skill in the Library, and Ask Claude inside each course in Learning. Each button sends Claude only what it needs from your hub and saves the answer here.</p><p class="small muted">A regular Claude chat cannot see your hub, because your data lives in your own private database. To get help there, copy in the part you want to talk about.</p></div>';
   h+='<div class="head"><h2>Skills</h2><p class="muted small">A skill is a saved workflow. Needed means building it would improve results in that area. Have means it exists today.</p></div><div class="cols">';
   [["needed","Needed"],["building","Building"],["have","Have"]].forEach(function(c){
     var items=sk.filter(function(s){return s.status===c[0]});

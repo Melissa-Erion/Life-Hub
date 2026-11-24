@@ -644,6 +644,7 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+.inststeps{margin:12px 0;padding-left:22px;display:flex;flex-direction:column;gap:6px;line-height:1.5}
 .pfbadge{align-self:flex-start;font-family:var(--display);font-weight:800;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--muted)}
 .pfthumb{display:block;border-radius:10px;overflow:hidden;background:var(--sunken);height:120px}
 .pfnone{display:flex;align-items:center;justify-content:center;text-decoration:none;border:1px dashed var(--line);background:none}
@@ -2092,6 +2093,7 @@ function vFamily(){
 }
 function vHelp(){
   var h='<div class="head"><h1>Feedback</h1><p class="muted">Found something broken, or want something added? Write it here. Everyone in the family can see these.</p></div>';
+  h+=vh("Install the app","home screen icon");h+=installHtml();
   h+=vh("Tour","every page explained");
   h+='<div class="card"><p class="small">A step-by-step walk through each page and what it is for. It takes about three minutes.</p><div class="row"><button class="btn primary" data-act="tour">Start the tour</button></div></div>';
   if(!FAM||!fdb)return h+'<div class="empty">Reports need the family space, which is not available in this view.</div>';
@@ -2121,6 +2123,7 @@ function famClick(a,id,b){
   if(a==="fp-close"){ui.fperson=null;render();return true}
   if(a==="fh-day"){var x=S.f_habits[id];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};var dk=b.getAttribute("data-d");if(x.days[dk])delete x.days[dk];else x.days[dk]=1;write("f_habits",id,x);return true}
   if(a==="tour"){tourStart();return true}
+  if(a==="inst-go"){installGo();return true}
   return false;
 }
 function famSubmit(k,id,f){
@@ -2615,10 +2618,33 @@ function s6Change(e){
   if(e.hasAttribute("data-cis")){var sk=e.getAttribute("data-cis"),sv=e.value.trim();savedNote(ciSave(function(c){c[sk]=sv}));return true}
   return false;
 }
+/* ---------- install the app ---------- */
+var BIP=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();BIP=e;if(db)render();if(tourEl&&ui.tour!=null)tourShow()});
+window.addEventListener("appinstalled",function(){BIP=null;flash("Installed. You can open Life Hub from your home screen or app list.");if(db)render()});
+function devKind(){var u=navigator.userAgent||"";if(/iPhone|iPad|iPod/.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1))return"ios";if(/Android/.test(u))return"android";return"computer"}
+function isInstalled(){try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){return false}}
+var INST={
+ ios:["Open the app link in Safari.","Tap the Share button: the square with an arrow pointing up, at the bottom of the screen (on iPad it is at the top).","Scroll down and tap Add to Home Screen.","Tap Add. A Life Hub icon appears on your home screen.","Open Life Hub from that icon and sign in once. It then opens like any other app."],
+ android:["Open the app link in Chrome.","Tap Install below if you see it. Otherwise tap the three dots at the top right.","Tap Install app, or Add to Home screen.","Tap Install. A Life Hub icon appears on your home screen and in your apps.","Open Life Hub from that icon and sign in once."],
+ computer:["Open the app link in Chrome or Edge.","Click Install below if you see it. Otherwise look for the small install icon at the right end of the address bar (a screen with a down arrow).","No icon? Open the browser menu (three dots) and choose Cast, save and share, then Install page as app. In Edge: Apps, then Install this site as an app.","Click Install. Life Hub opens in its own window and gets an icon you can pin to the taskbar or dock.","On a Mac using Safari: File, then Add to Dock."]};
+function appLink(){return location.origin+location.pathname.replace(/index\.html$/,"")}
+function installHtml(){
+  if(isInstalled())return'<div class="card"><p class="small"><b>You are using the installed app.</b> To put it on another device, open '+esc(appLink())+' there and follow the steps for that device.</p></div>';
+  if(!ui.inst)ui.inst=devKind();
+  var h='<div class="card"><p class="small">Life Hub works in the browser, but installing it puts an icon on your home screen so it opens like a normal app, full screen, without the address bar. It is free and takes a minute. The app link is <b style="overflow-wrap:anywhere">'+esc(appLink())+'</b>.</p>';
+  h+=tog("inst",[["ios","iPhone or iPad"],["android","Android phone"],["computer","Computer"]]);
+  h+='<ol class="inststeps">'+INST[ui.inst].map(function(t){return"<li>"+esc(t)+"</li>"}).join("")+'</ol>';
+  if(BIP&&ui.inst!=="ios")h+='<div class="row"><button class="btn primary" data-act="inst-go">Install now</button></div>';
+  h+='<p class="small muted">Signed in already? Installing keeps you signed in. Each person signs in with their own email.</p></div>';
+  return h;
+}
+function installGo(){if(!BIP){flash("Use the steps for your device.");return}var p=BIP;BIP=null;p.prompt();(p.userChoice||Promise.resolve()).then(function(){if(db)render()})}
 /* ---------- tour ---------- */
 var TOUR=[
  ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. The Family page is the one place you share. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
  ["today","Getting around","On a computer the pages are in the menu on the left, grouped by what they are for. On a phone the main pages sit in the bar at the bottom and everything else is under More. The button at the bottom of the menu switches between light and dark."],
+ ["help","Install it as an app",function(){if(isInstalled())return"You are already using the installed app, so you can skip this. To add it to another device, open the app link there; the steps are on the Feedback page.";var k=devKind();return(k==="ios"?"On an iPhone: open the app link in Safari, tap the Share button (square with an up arrow) at the bottom, then Add to Home Screen, then Add.":k==="android"?"On an Android phone: in Chrome, tap the three dots at the top right, then Install app or Add to Home screen, then Install.":"On a computer: in Chrome or Edge, click the install icon at the right end of the address bar, or open the menu and choose Install.")+" It then opens like a normal app from its icon. The full steps for every device are on this page, under Install the app."}],
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
  ["log","Journal","One card per day. Press Add entry, write what happened and how you felt. Claude can read your entries and point out patterns over time, such as what drains you or what keeps you on track. Entries are private."],
@@ -2643,8 +2669,8 @@ function tourShow(){
   var i=ui.tour,s=TOUR[i];if(s==null)return;
   if(location.hash!=="#"+s[0])location.hash="#"+s[0];
   if(!tourEl){tourEl=document.createElement("div");tourEl.id="tour";tourEl.setAttribute("role","dialog");tourEl.setAttribute("aria-label","Tour");document.body.appendChild(tourEl);
-    tourEl.addEventListener("click",function(ev){var b=ev.target.closest("button[data-t]");if(!b)return;var t=b.getAttribute("data-t");if(t==="next"){if(ui.tour>=TOUR.length-1){tourEnd(true);return}ui.tour++;tourShow()}else if(t==="back"){if(ui.tour>0){ui.tour--;tourShow()}}else tourEnd(false)})}
-  tourEl.innerHTML='<div class="tourtop"><span class="small muted">'+(i+1)+' of '+TOUR.length+'</span><button class="btn ghost" data-t="close" aria-label="Close tour">Close</button></div><h2>'+esc(s[1])+'</h2><p>'+esc(s[2])+'</p><div class="tourbar"><i style="width:'+Math.round(100*(i+1)/TOUR.length)+'%"></i></div><div class="row"><button class="btn" data-t="back"'+(i?"":" disabled")+'>Back</button><button class="btn primary" data-t="next">'+(i===TOUR.length-1?"Finish":"Next")+'</button></div>';
+    tourEl.addEventListener("click",function(ev){var b=ev.target.closest("button[data-t]");if(!b)return;var t=b.getAttribute("data-t");if(t==="next"){if(ui.tour>=TOUR.length-1){tourEnd(true);return}ui.tour++;tourShow()}else if(t==="back"){if(ui.tour>0){ui.tour--;tourShow()}}else if(t==="install"){installGo()}else tourEnd(false)})}
+  tourEl.innerHTML='<div class="tourtop"><span class="small muted">'+(i+1)+' of '+TOUR.length+'</span><button class="btn ghost" data-t="close" aria-label="Close tour">Close</button></div><h2>'+esc(s[1])+'</h2><p>'+esc(typeof s[2]==="function"?s[2]():s[2])+'</p>'+(typeof s[2]==="function"&&BIP&&!isInstalled()&&devKind()!=="ios"?'<div class="row" style="justify-content:flex-start"><button class="btn" data-t="install">Install now</button></div>':"")+'<div class="tourbar"><i style="width:'+Math.round(100*(i+1)/TOUR.length)+'%"></i></div><div class="row"><button class="btn" data-t="back"'+(i?"":" disabled")+'>Back</button><button class="btn primary" data-t="next">'+(i===TOUR.length-1?"Finish":"Next")+'</button></div>';
   document.querySelectorAll(".tour-on").forEach(function(x){x.classList.remove("tour-on")});
   document.querySelectorAll('nav a[href="#'+s[0]+'"],#sheet a[href="#'+s[0]+'"]').forEach(function(x){x.classList.add("tour-on")});
   window.scrollTo(0,0);var nb=tourEl.querySelector('[data-t="next"]');if(nb)nb.focus({preventScroll:true});

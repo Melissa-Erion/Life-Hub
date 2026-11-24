@@ -644,6 +644,33 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+/* ---------- phone layout: clearer hierarchy, less stacking ---------- */
+@media (max-width:760px){
+  main{gap:12px}
+  .head h1{font-size:1.85rem;line-height:1.1}
+  .head > p.muted{font-size:.9rem}
+  .vh{margin-top:20px;padding-bottom:8px}
+  .vh h2{font-size:1rem;letter-spacing:.07em}
+  .vh span{font-size:.78rem}
+  .card{padding:14px;gap:8px}
+  .mini{padding:12px;gap:6px}
+  .grid{gap:10px}
+  .grid:has(> .tile){grid-template-columns:1fr 1fr;gap:8px}
+  .tile{padding:12px}
+  .tile b{font-size:1.65rem}
+  .tile span{font-size:.78rem;line-height:1.35}
+  .jump{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-16px;margin-right:-16px;padding:2px 16px 4px;gap:6px;-webkit-overflow-scrolling:touch}
+  .jump::-webkit-scrollbar{display:none}
+  .jump > .btn{flex:none;white-space:nowrap}
+  .jump.sub{margin-left:0;margin-right:0;padding:5px}
+  .rail,.cols{display:grid;grid-auto-flow:column;grid-auto-columns:80%;grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin-left:-16px;margin-right:-16px;padding:2px 16px 6px;scroll-padding-left:16px;align-items:stretch}
+  .rail::-webkit-scrollbar,.cols::-webkit-scrollbar{display:none}
+  .rail > *,.cols > *{scroll-snap-align:start;min-width:0}
+  .cols{grid-auto-columns:86%;align-items:start}
+  .cal button{aspect-ratio:auto;height:40px}
+  .cal{gap:2px}
+}
+
 .inststeps{margin:12px 0;padding-left:22px;display:flex;flex-direction:column;gap:6px;line-height:1.5}
 .pfbadge{align-self:flex-start;font-family:var(--display);font-weight:800;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--muted)}
 .pfthumb{display:block;border-radius:10px;overflow:hidden;background:var(--sunken);height:120px}
@@ -2049,14 +2076,14 @@ function vFamily(){
   if(t==="home"){
     var up=famUpcoming(14);
     h+=vh("Next two weeks",up.length?up.length+" coming up":"");
-    h+=up.length?'<div class="grid g3 fill">'+up.slice(0,9).map(function(x){return famItemBox(x,false)}).join("")+'</div>'+(up.length>9?'<p class="small muted">'+(up.length-9)+' more on the Calendar.</p>':""):'<div class="empty small">Nothing in the next two weeks. Add events on the Calendar tab.</div>';
+    h+=up.length?'<div class="grid g3 fill rail">'+up.slice(0,9).map(function(x){return famItemBox(x,false)}).join("")+'</div>'+(up.length>9?'<p class="small muted">'+(up.length-9)+' more on the Calendar.</p>':""):'<div class="empty small">Nothing in the next two weeks. Add events on the Calendar tab.</div>';
     var cw=S.f_checkins[wkStart(today())]||{},cmine=((cw.answers||{})[famMe()]||{});
-    h+=vh("This week");h+='<div class="grid g3 fill"><div class="mini"><b>Weekly check-in</b><span class="small">'+(cw.done?"Done "+esc(whenAgo(cw.done.date))+".":Object.keys(cmine).length?"You have started your answers.":"Not done yet this week.")+'</span>'+(cw.together?'<span class="small muted">Together: '+esc(cw.together)+'</span>':"")+'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="checkin">Open check-in</button></div>'+list("f_lists").sort(function(a,b){return(a.ord||9)-(b.ord||9)}).slice(0,2).map(function(L){var op=fItems("list:"+L.id).filter(function(x){return !x.done});return'<div class="mini"><b>'+esc(L.name)+'</b><span class="small">'+(op.length?op.length+" on the list: "+esc(op.slice(0,3).map(function(x){return x.t}).join(", "))+(op.length>3?"…":""):"Nothing on the list.")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fl-open-tab" data-id="'+L.id+'">Open list</button></div>'}).join("")+'</div>';
+    h+=vh("This week");h+='<div class="grid g3 fill rail"><div class="mini"><b>Weekly check-in</b><span class="small">'+(cw.done?"Done "+esc(whenAgo(cw.done.date))+".":Object.keys(cmine).length?"You have started your answers.":"Not done yet this week.")+'</span>'+(cw.together?'<span class="small muted">Together: '+esc(cw.together)+'</span>':"")+'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="checkin">Open check-in</button></div>'+list("f_lists").sort(function(a,b){return(a.ord||9)-(b.ord||9)}).slice(0,2).map(function(L){var op=fItems("list:"+L.id).filter(function(x){return !x.done});return'<div class="mini"><b>'+esc(L.name)+'</b><span class="small">'+(op.length?op.length+" on the list: "+esc(op.slice(0,3).map(function(x){return x.t}).join(", "))+(op.length>3?"…":""):"Nothing on the list.")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fl-open-tab" data-id="'+L.id+'">Open list</button></div>'}).join("")+'</div>';
     h+=vh("Home","chores, to-dos and upkeep");h+=famHomeTiles();h+='<div class="row"><button class="btn" data-act="fam-tab" data-tab="chores">Open chores</button><button class="btn" data-act="fam-tab" data-tab="upkeep">Open home upkeep</button></div>';
     h+=vh("Habits","consistency");h+=famScoreTiles();
     h+=famGoalsHtml();
     h+=vh("Members",FAM.members.length+" signed in");
-    h+='<div class="grid g3 fill">'+FAM.members.map(function(m){return'<div class="mini"><b>'+esc(m.name)+(m.me?' <span class="pill">You</span>':"")+'</b><span class="small muted">'+(m.role==="owner"?"Owner":"Member")+'</span>'+(m.me?'<div class="f"><label for="fam-name">Your name here</label><input type="text" id="fam-name" data-famname="1" value="'+esc(m.name)+'"></div>':"")+'</div>'}).join("")+'<div class="mini"><b>New here?</b><span class="small">The tour walks through every page and what it is for.</span><button class="btn" style="align-self:flex-start" data-act="tour">Take the tour</button></div></div>';
+    h+='<div class="grid g3 fill rail">'+FAM.members.map(function(m){return'<div class="mini"><b>'+esc(m.name)+(m.me?' <span class="pill">You</span>':"")+'</b><span class="small muted">'+(m.role==="owner"?"Owner":"Member")+'</span>'+(m.me?'<div class="f"><label for="fam-name">Your name here</label><input type="text" id="fam-name" data-famname="1" value="'+esc(m.name)+'"></div>':"")+'</div>'}).join("")+'<div class="mini"><b>New here?</b><span class="small">The tour walks through every page and what it is for.</span><button class="btn" style="align-self:flex-start" data-act="tour">Take the tour</button></div></div>';
   }
   if(t==="goals")h+=famGoalsView();
   if(t==="chores")h+=famChoresView();
@@ -2083,7 +2110,7 @@ function vFamily(){
     h+='</div></div>';
     var up2=famUpcoming(60);
     h+=vh("Coming up","next 60 days");
-    h+=up2.length?'<div class="grid g3 fill">'+up2.map(function(x){return famItemBox(x,false)}).join("")+'</div>':'<div class="empty small">Nothing planned yet.</div>';
+    h+=up2.length?'<div class="grid g3 fill rail">'+up2.map(function(x){return famItemBox(x,false)}).join("")+'</div>':'<div class="empty small">Nothing planned yet.</div>';
   }
   if(t==="people")h+=famPeopleView();
   if(t==="checkin")h+=famCheckinView();
@@ -2352,7 +2379,7 @@ function famGiftsView(){
   var xm=y+"-12-25";if(xm<today())xm=(y+1)+"-12-25";if(daysTo(xm)<=120)occ.push({who:"",what:"Christmas",d:xm});
   occ.sort(function(a,b){return a.d.localeCompare(b.d)});
   var h=vh("Coming up","next four months");
-  h+=occ.length?'<div class="grid g3 fill">'+occ.map(function(o){var n=gs.filter(function(g){return g.status!=="given"&&(o.who?g.forName===o.who&&g.occasion==="Birthday":g.occasion==="Christmas")}).length;return'<div class="mini"><span class="small muted">'+esc(whenWord(o.d))+(daysTo(o.d)>6?" · in "+daysTo(o.d)+" days":"")+'</span><b>'+esc(o.who?o.who+"’s birthday":o.what)+'</b><span class="small">'+(n?n+" gift"+(n>1?"s":"")+" planned":"Nothing planned yet")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="gift-for" data-who="'+esc(o.who)+'" data-occ="'+o.what+'">Add an idea</button></div>'}).join("")+'</div>':'<div class="empty small">No birthdays in the next four months. Add birthdays on the People and pets tab.</div>';
+  h+=occ.length?'<div class="grid g3 fill rail">'+occ.map(function(o){var n=gs.filter(function(g){return g.status!=="given"&&(o.who?g.forName===o.who&&g.occasion==="Birthday":g.occasion==="Christmas")}).length;return'<div class="mini"><span class="small muted">'+esc(whenWord(o.d))+(daysTo(o.d)>6?" · in "+daysTo(o.d)+" days":"")+'</span><b>'+esc(o.who?o.who+"’s birthday":o.what)+'</b><span class="small">'+(n?n+" gift"+(n>1?"s":"")+" planned":"Nothing planned yet")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="gift-for" data-who="'+esc(o.who)+'" data-occ="'+o.what+'">Add an idea</button></div>'}).join("")+'</div>':'<div class="empty small">No birthdays in the next four months. Add birthdays on the People and pets tab.</div>';
   h+=vh("Add a gift");
   var dl='<datalist id="gift-people">'+famPeople().map(function(p){return'<option value="'+esc(p.name)+'">'}).join("")+'</datalist>';
   h+='<div class="card"><form class="fform" data-form="gift"><div class="row fwrap"><div class="f"><label for="gf-for">For</label><input type="text" id="gf-for" class="keep" list="gift-people" placeholder="Name" value="'+esc(ui.gfFor||"")+'"></div><div class="f"><label for="gf-occ">Occasion</label><select id="gf-occ" class="keep">'+GOCC.map(function(o){return'<option'+(ui.gfOcc===o?" selected":"")+'>'+o+'</option>'}).join("")+'</select></div><div class="f" style="flex:2 1 220px"><label for="gf-idea">Gift</label><input type="text" id="gf-idea" class="keep" placeholder="What it is"></div></div><div class="row fwrap"><div class="f" style="flex:0 1 140px"><label for="gf-price">Price (optional)</label><input type="text" inputmode="decimal" id="gf-price" class="keep"></div><div class="f" style="flex:2 1 220px"><label for="gf-where">Where to get it or link</label><input type="text" inputmode="url" id="gf-where" class="keep"></div></div>'+dl+'<label class="gshare"><input type="checkbox" id="gf-secret"> Keep private <span class="small muted">· only you can see it, for gifts for each other</span></label><div class="row"><button class="btn primary" type="submit">Add gift</button></div></form></div>';
@@ -2554,7 +2581,7 @@ function famTripsView(){
   if(ui.ftr&&S.f_trips[ui.ftr])return tripDetail(ui.ftr);
   var ts=list("f_trips"),t0=today(),up=ts.filter(function(t){return t.status!=="done"&&t.start&&(t.end||t.start)>=t0}).sort(function(a,b){return a.start.localeCompare(b.start)}),ideas=ts.filter(function(t){return t.status!=="done"&&!t.start}),past=ts.filter(function(t){return t.status==="done"||(t.start&&(t.end||t.start)<t0)}).sort(function(a,b){return(b.start||"").localeCompare(a.start||"")});
   var h=vh("Coming up",up.length+" planned");
-  h+=up.length?'<div class="grid g3 fill">'+up.map(tripCard).join("")+'</div>':'<div class="empty small">Nothing planned with dates yet.</div>';
+  h+=up.length?'<div class="grid g3 fill rail">'+up.map(tripCard).join("")+'</div>':'<div class="empty small">Nothing planned with dates yet.</div>';
   h+='<div class="card"><h3 style="margin-top:0">Add a trip or holiday</h3><form class="add" data-form="ftrip"><div class="f" style="flex:2 1 200px"><label for="ftn-name">Name</label><input type="text" id="ftn-name" class="keep" placeholder="Camping trip, Christmas at home" aria-label="Name"></div><div class="f" style="flex:1 1 140px"><label for="ftn-kind">Type</label><select id="ftn-kind" class="keep" aria-label="Type"><option value="trip">Trip</option><option value="holiday">Holiday at home</option></select></div><div class="f" style="flex:1 1 140px"><label for="ftn-start">From</label><input type="date" id="ftn-start" class="keep" aria-label="From"></div><div class="f" style="flex:1 1 140px"><label for="ftn-end">To (optional)</label><input type="date" id="ftn-end" class="keep" aria-label="To"></div><button class="btn" type="submit">Add trip</button></form></div>';
   if(ideas.length)h+=vh("Ideas","no dates yet")+'<div class="grid g3 fill">'+ideas.map(tripCard).join("")+'</div>';
   if(past.length)h+='<details class="earlier"><summary class="small">Past ('+past.length+')</summary><div class="grid g3 fill" style="margin-top:10px">'+past.map(tripCard).join("")+'</div></details>';
@@ -2697,6 +2724,7 @@ function render(){
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
   view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal],textarea[data-cnf]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
+  if(innerWidth<=760)view.querySelectorAll('.jump > .btn.on').forEach(function(bt){var j=bt.parentNode;if(j.scrollWidth<=j.clientWidth)return;var jr=j.getBoundingClientRect(),br=bt.getBoundingClientRect();if(br.left<jr.left+12||br.right>jr.right-12)j.scrollLeft+=br.left-jr.left-16});
   if(ui.scrollTo){var se=document.getElementById(ui.scrollTo);ui.scrollTo=null;if(se&&se.scrollIntoView)se.scrollIntoView({block:"start"})}
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e&&keep[id]!==""){e.value=keep[id]}});
   var subSel=document.getElementById("ng-sub");if(subSel&&keep["ng-area"]!==undefined){subSel.innerHTML=subOptions(val("ng-area"),keep["ng-sub"]||"")}

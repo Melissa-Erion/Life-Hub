@@ -53,4 +53,5 @@ Do not start a rewrite until she has chosen. `docs/ARCHITECTURE.md` has the deta
 - `plan(id)` is the goal-planning function. The planner doc helper is `pdoc(k)`. Do not reuse the name `plan`.
 - Buttons that need a second "Confirm" click must be listed in the confirm whitelist at the top of the click handler, or the confirm cancels itself.
 - `input type="url"` blocks form submit when the scheme is missing; use `type="text" inputmode="url"`.
+- `render()` does nothing while a date input inside `#view` has focus on the same page (it sets `ui.pendingRender` and redraws on focusout). This stops date pickers flashing when a save comes back. Tests that type into a date box must click elsewhere to see the redraw; Tab stays inside a date box.
 - The existing data lives in the claude.ai artifact database, not in this folder. See "Moving the data" in `docs/ARCHITECTURE.md`.

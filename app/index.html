@@ -2653,7 +2653,8 @@ function tourAuto(){if(ui.tourAsked||!db)return;ui.tourAsked=true;if(!pdoc("tour
 var NAMES={};var VIEWS={family:vFamily,help:vHelp,study:vStudy,social:vSocial,money:vMoney,find:vFind,data:vData,fit:vFit,biz:vBiz,plan:vPlan,today:vToday,goals:vGoals,areas:vAreas,claude:vClaude,log:vLog,learn:vLearn};
 function current(){var h=location.hash.replace("#","");return VIEWS[h]?h:"today"}
 function render(){
-  var cur=current();
+  var dae=document.activeElement;if(dae&&dae.type==="date"&&view.contains(dae)){if(current()===ui.lastRV){ui.pendingRender=true;return}dae.blur()}
+  var cur=current();ui.lastRV=cur;ui.pendingRender=false;
   document.querySelectorAll("nav a").forEach(function(a){if(a.getAttribute("href")==="#"+cur)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
   if(dead){view.innerHTML='<div class="empty">Your hub\'s saved data is not available in this view. Open it from your Claude artifacts while signed in.</div>';return}
   var all=loaded.tax&&loaded.levels&&COLLS.every(function(c){return loaded[c]});
@@ -2747,6 +2748,8 @@ view.addEventListener("submit",function(ev){
 });
 
 view.addEventListener("input",function(ev){if(ev.target.id==="q"){ui.q=ev.target.value;render()}});
+/* Redraws wait while a date box on the same page is in use, so the picker does not reset or flash while someone is choosing a date. */
+view.addEventListener("focusout",function(){if(ui.pendingRender)setTimeout(function(){if(ui.pendingRender)render()},0)});
 view.addEventListener("change",function(ev){
   var e=ev.target;
   if(famChange(e))return;

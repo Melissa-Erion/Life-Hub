@@ -116,7 +116,7 @@ Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached thr
 
 Personal goals with `shared:true` are readable by family members (RLS policy on `docs`) and appear in `S.pgoals`.
 
-Pages: `#family` (tabs Overview, Check-in, Calendar, Lists, Goals, Chores, Home upkeep, Money, Gifts, Trips, Habits, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.
+Pages: `#family`, organised by `FGROUPS` into five sections (Overview; Plan: Calendar, Check-in, Trips; Home: Chores, Lists, Upkeep; Money: Budget, Investing, Gifts; People: Profiles, Goals, Habits). `famNav()` draws the section row (`data-act="famg"`) and the tab row (`tog` key `fam`); `ui.fam` is the tab and `ui.famLast` remembers the last tab per section and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.
 
 Family files are uploaded with `family.upload(file)` to Storage at `files/family/<space_id>/<id>`. Storage policies let any member of that space read, add and delete there (`private.member_of_text`). The service worker serves them at `_blob/fam/<space_id>/<id>`.
 

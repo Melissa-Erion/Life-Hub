@@ -650,6 +650,11 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+.famnav{display:flex;flex-direction:column;gap:10px}
+.famg .btn{font-weight:800;padding:9px 16px}
+.famnav .jump.sub{margin-top:0}
+@media (max-width:760px){.famg{gap:4px}.famg .btn{padding:8px 9px;font-size:.8rem;letter-spacing:0}.famnav .jump.sub .btn{padding:7px 12px;font-size:.84rem}}
+
 .invnum{display:flex;flex-direction:column;gap:2px}.invnum b{font-family:var(--display);font-size:1.4rem;font-weight:900;letter-spacing:-.02em}
 .invg{font-weight:700}.invg.down{color:var(--signal)}
 .mixrow{display:flex;flex-direction:column;gap:6px;padding:6px 0}
@@ -2096,11 +2101,19 @@ function famGoalsHtml(inTab){
   oks.forEach(function(k){var o=byOwner[k];h+='<div class="col"><div class="row"><h3>'+esc(o.name)+'</h3><span class="pill">'+o.items.length+'</span></div>'+o.items.map(function(x){var g=x.data;g.id=x.id;return famGoalBox(g,"Shared by "+o.name,false)}).join("")+'</div>'});
   return h+'</div>';
 }
+var FGROUPS=[["home","Overview",[["home","Overview"]]],["plan","Plan",[["cal","Calendar"],["checkin","Check-in"],["trips","Trips"]]],["house","Home",[["chores","Chores"],["lists","Lists"],["upkeep","Upkeep"]]],["money","Money",[["money","Budget"],["invest","Investing"],["gifts","Gifts"]]],["people","People",[["people","Profiles"],["goals","Goals"],["habits","Habits"]]]];
+function famGroupOf(t){for(var i=0;i<FGROUPS.length;i++)if(FGROUPS[i][2].some(function(x){return x[0]===t}))return FGROUPS[i];return FGROUPS[0]}
+function famNav(){
+  var g=famGroupOf(ui.fam);ui.famLast=ui.famLast||{};ui.famLast[g[0]]=ui.fam;
+  var h='<div class="famnav"><div class="jump famg" role="group" aria-label="Family sections">'+FGROUPS.map(function(x){var on=x[0]===g[0];return'<button class="btn'+(on?" on":"")+'" data-act="famg" data-id="'+x[0]+'" aria-pressed="'+on+'">'+x[1]+'</button>'}).join("")+'</div>';
+  if(g[2].length>1)h+='<div class="jump sub" role="group" aria-label="'+esc(g[1])+'">'+g[2].map(function(x){var on=x[0]===ui.fam;return'<button class="btn'+(on?" on":"")+'" data-act="tog" data-key="fam" data-id="'+x[0]+'" aria-pressed="'+on+'">'+x[1]+'</button>'}).join("")+'</div>';
+  return h+'</div>';
+}
 function vFamily(){
   var h='<div class="head"><h1>'+esc(FAM?FAM.name:"Family")+'</h1><p class="muted">Your shared space. Each of you keeps a private hub; this page is the part you both see.</p></div>';
   if(!FAM)return h+'<div class="empty">The family space is not available in this view.</div>';
   if(!ui.fam)ui.fam="home";
-  h+=tog("fam",[["home","Overview"],["checkin","Check-in"],["cal","Calendar"],["lists","Lists"],["goals","Goals"],["chores","Chores"],["upkeep","Home upkeep"],["money","Money"],["gifts","Gifts"],["trips","Trips"],["habits","Habits"],["people","People and pets"]]);
+  h+=famNav();
   var t=ui.fam;
   if(t==="home"){
     var up=famUpcoming(14);
@@ -2117,7 +2130,8 @@ function vFamily(){
   if(t==="goals")h+=famGoalsView();
   if(t==="chores")h+=famChoresView();
   if(t==="upkeep")h+=famUpkeepView();
-  if(t==="money")h+=famMoneyView();
+  if(t==="money")h+=famMoneyBudget();
+  if(t==="invest")h+=vh("Investing","shared with the family")+invHtml(FCFG);
   if(t==="gifts")h+=famGiftsView();
   if(t==="habits"){
     h+=vh("Family habits","separate from your personal habits");
@@ -2167,6 +2181,7 @@ function vHelp(){
   return h;
 }
 function famClick(a,id,b){
+  if(a==="famg"){var gg=FGROUPS.filter(function(x){return x[0]===id})[0];if(!gg)return true;ui.famLast=ui.famLast||{};ui.fam=ui.famLast[id]||gg[2][0][0];ui.flo=null;ui.ftr=null;ui.fck=null;ui.fgo=null;ui.fperson=null;ui.fch=null;ui.fmx=null;ui.fev=null;render();return true}
   if(choresClick(a,id,b)||goalsClick(a,id,b)||moneyClick(a,id,b)||s6Click(a,id,b)||schoolClick(a,id,b)||pfClick(a,id,b))return true;
   if(a==="fc-day"){ui.fday=b.getAttribute("data-d");ui.fm=ui.fday.slice(0,7);ui.fev=null;render();return true}
   if(a==="fc-mv"){var r=pd((ui.fm||(ui.fday||today()).slice(0,7))+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.fm=ymd(r).slice(0,7);render();return true}
@@ -2433,12 +2448,6 @@ function invSubmit(k,id,f){
 /* ---------- family money and gifts ---------- */
 function hMonth(){return ui.hm||today().slice(0,7)}
 function hEntries(m){return list("f_hmoney").filter(function(x){return(x.date||"").slice(0,7)===m})}
-function famMoneyView(){
-  if(!ui.hmt)ui.hmt="budget";
-  var top=tog("hmt",[["budget","Budget and bills"],["invest","Investing"]]);
-  if(ui.hmt==="invest")return top+vh("Investing","shared with the family")+invHtml(FCFG);
-  return top+famMoneyBudget();
-}
 function famMoneyBudget(){
   var m=hMonth(),en=hEntries(m),inc=en.filter(function(x){return x.kind==="in"}).reduce(function(a,x){return a+num(x.amount)},0),out=en.filter(function(x){return x.kind!=="in"}).reduce(function(a,x){return a+num(x.amount)},0);
   var cats=list("f_hcats").sort(function(a,b){return a.name.localeCompare(b.name)}),planned=cats.reduce(function(a,c){return a+num(c.planned)},0);
@@ -2801,7 +2810,7 @@ var TOUR=[
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
  ["log","Journal","One card per day. Press Add entry, write what happened and how you felt. Claude can read your entries and point out patterns over time, such as what drains you or what keeps you on track. Entries are private."],
- ["family","Family","The shared page, with a tab for each part of family life. Overview shows the next two weeks and how things are going. Check-in is a ten-minute weekly talk. Calendar holds events, birthdays, trips and bills. Lists are shared lists like groceries. Goals are the goals you work on together, with an owner for each step. Chores, Home upkeep, Money, Gifts and Trips do what they say. Habits are the habits you track where you can both see them. People and pets has a profile for everyone, with health, sizes, school and favourites. Gifts marked private are only seen by the person who added them."],
+ ["family","Family","The shared page, in five sections along the top, each with its own tabs. Overview: the next two weeks and how things are going. Plan: the calendar with events, birthdays, trips and bills, the weekly check-in, and trips and holidays. Home: chores and to-dos, shared lists like groceries, and home upkeep. Money: the household budget and bills, shared investing, and gifts. People: profiles for everyone (health, sizes, school, files), goals you work on together, and the habits you can both see. Gifts marked private are only seen by the person who added them."],
  ["areas","Explore","Ideas for what to work on. Life is split into areas such as money, health, home and career. Pick up to three focus areas, browse the goal ideas inside each one, and add the ones you like as goals."],
  ["goals","Goals","Every goal has a target, a date, steps and milestones, and a result number you record over time. Flags tell you when a goal needs something, such as a date or a scheduled next step. To show a goal on the Family page, open it and tick Show to family; otherwise it stays private."],
  ["fit","Fitness","Training: build workouts and schedule them over weeks. Check-ins: record weight, measurements and photos to see progress. Nutrition: daily meals and macro targets. Fitness goals sit in their own tab."],

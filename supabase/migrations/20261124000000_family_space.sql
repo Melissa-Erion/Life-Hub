@@ -74,3 +74,16 @@ grant update (display_name) on public.space_members to authenticated;
 revoke update on public.spaces from authenticated;
 grant update (name) on public.spaces to authenticated;
 revoke insert, delete on public.spaces, public.space_members from authenticated;
+
+-- Family files: Storage path files/family/<space_id>/<id>, readable and writable by members of that space.
+create or replace function private.member_of_text(s text) returns boolean
+language sql stable security definer set search_path to '' as $$
+  select exists(select 1 from public.space_members m where m.user_id = (select auth.uid()) and m.space_id::text = s);
+$$;
+grant execute on function private.member_of_text(text) to authenticated;
+create policy "family files: select" on storage.objects for select to authenticated
+  using (bucket_id = 'files' and (storage.foldername(name))[1] = 'family' and private.member_of_text((storage.foldername(name))[2]));
+create policy "family files: insert" on storage.objects for insert to authenticated
+  with check (bucket_id = 'files' and (storage.foldername(name))[1] = 'family' and private.member_of_text((storage.foldername(name))[2]));
+create policy "family files: delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'files' and (storage.foldername(name))[1] = 'family' and private.member_of_text((storage.foldername(name))[2]));

@@ -96,7 +96,7 @@ Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached thr
 
 | Collection | Shape |
 |---|---|
-| `f_people` | `{name, kind:"person"|"pet", birthday, order, ...profile fields}` (sections and fields in `PSECT`) |
+| `f_people` | `{name, kind:"person"|"pet", birthday, order, ...profile fields}` (sections and fields in `PSECT`); school tab fields in `SFIELDS` plus `teachers:[{name,role,email,phone}]`, `sched:[{t, d:[Mon..Fri]}]`, `schoolOn`; `docs:[{kind:"file"|"link", name, cat, note, date, by, byName, url | fid+blob}]` |
 | `f_events` | `{title, date, time, end, where, notes, who:[personId], yearly, by}`; birthdays come from `f_people` |
 | `f_habits` | `{name, per, owner:user_id, days:{date:1}}`; only the owner can tick |
 | `f_chores` | `{name, who:personId, freq:"daily"|"weekly"|"biweekly"|"monthly", day, notes, log:{periodKey:{by,byName,date}}, last}`; `chKey()` gives the current period key, so ticks reset by themselves |
@@ -117,3 +117,5 @@ Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached thr
 Personal goals with `shared:true` are readable by family members (RLS policy on `docs`) and appear in `S.pgoals`.
 
 Pages: `#family` (tabs Overview, Check-in, Calendar, Lists, Goals, Chores, Home upkeep, Money, Gifts, Trips, Habits, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.
+
+Family files are uploaded with `family.upload(file)` to Storage at `files/family/<space_id>/<id>`. Storage policies let any member of that space read, add and delete there (`private.member_of_text`). The service worker serves them at `_blob/fam/<space_id>/<id>`.

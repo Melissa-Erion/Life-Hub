@@ -1,6 +1,6 @@
 /* Life Hub service worker: caches the app shell so it opens fast and installs,
    and serves /_blob/<id> uploads from private Supabase Storage using the user's token. */
-var CACHE = "lifehub-v3";
+var CACHE = "lifehub-v4";
 var SHELL = ["./", "index.html", "runtime.js", "vendor/supabase.js", "config.js", "library.json", "pathways.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", function (e) {
@@ -28,6 +28,14 @@ function getAuth(clientId) {
 self.addEventListener("fetch", function (e) {
   var req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
+  var fm = url.origin === self.location.origin && url.pathname.match(/\/_blob\/fam\/([0-9a-f-]{36})\/([A-Za-z0-9]+)$/);
+  if (fm) {
+    e.respondWith(getAuth(e.clientId).then(function (a) {
+      if (!a) return new Response("Sign in to view this file.", { status: 401 });
+      return fetch(a.url + "/storage/v1/object/authenticated/files/family/" + fm[1] + "/" + fm[2], { headers: { Authorization: "Bearer " + a.token, apikey: a.key } });
+    }));
+    return;
+  }
   var m = url.origin === self.location.origin && url.pathname.match(/\/_blob\/([A-Za-z0-9]+)$/);
   if (m) {
     e.respondWith(getAuth(e.clientId).then(function (a) {

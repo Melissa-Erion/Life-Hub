@@ -644,6 +644,12 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+.pfbadge{align-self:flex-start;font-family:var(--display);font-weight:800;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--muted)}
+.pfthumb{display:block;border-radius:10px;overflow:hidden;background:var(--sunken);height:120px}
+.pfnone{display:flex;align-items:center;justify-content:center;text-decoration:none;border:1px dashed var(--line);background:none}
+.pfnone span{font-family:var(--display);font-weight:800;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pfthumb img{width:100%;height:100%;object-fit:cover;display:block}
+
 .fpfields.four{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .fsched td:first-child input{min-width:70px}
 @media (min-width:761px){
@@ -2103,7 +2109,7 @@ function vHelp(){
   return h;
 }
 function famClick(a,id,b){
-  if(choresClick(a,id,b)||goalsClick(a,id,b)||moneyClick(a,id,b)||s6Click(a,id,b)||schoolClick(a,id,b))return true;
+  if(choresClick(a,id,b)||goalsClick(a,id,b)||moneyClick(a,id,b)||s6Click(a,id,b)||schoolClick(a,id,b)||pfClick(a,id,b))return true;
   if(a==="fc-day"){ui.fday=b.getAttribute("data-d");ui.fm=ui.fday.slice(0,7);ui.fev=null;render();return true}
   if(a==="fc-mv"){var r=pd((ui.fm||(ui.fday||today()).slice(0,7))+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.fm=ymd(r).slice(0,7);render();return true}
   if(a==="fc-now"){ui.fday=today();ui.fm=null;render();return true}
@@ -2118,7 +2124,7 @@ function famClick(a,id,b){
   return false;
 }
 function famSubmit(k,id,f){
-  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f)||moneySubmit(k,id,f)||s6Submit(k,id,f)||schoolSubmit(k,id,f))return true;
+  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f)||moneySubmit(k,id,f)||s6Submit(k,id,f)||schoolSubmit(k,id,f)||pfSubmit(k,id,f))return true;
   if(k==="fhab"){var n=val("fh-name");if(!n||!famMe())return true;write("f_habits",newId(),{name:n,per:+val("fh-per")||7,owner:famMe(),days:{},created:today()}).then(function(ok){if(ok)flash("Added. Your family can see it.")});document.getElementById("fh-name").value="";return true}
   if(k==="fev"){var p=id?"fe-ed-":"fe-new-",t=val(p+"title"),d=val(p+"date");if(!t||!d){ui.err="Add what it is and the date.";render();return true}
     var who=[].slice.call(f.querySelectorAll('input[name="'+p+'who"]:checked')).map(function(x){return x.value}),en=val(p+"end");
@@ -2133,7 +2139,7 @@ function famSubmit(k,id,f){
   return false;
 }
 function famChange(e){
-  if(choresChange(e)||goalsChange(e)||moneyChange(e)||s6Change(e)||schoolChange(e))return true;
+  if(choresChange(e)||goalsChange(e)||moneyChange(e)||s6Change(e)||schoolChange(e)||pfChange(e))return true;
   if(e.hasAttribute("data-fhtoday")){var hid=e.getAttribute("data-fhtoday"),x=S.f_habits[hid];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};if(e.checked)x.days[dayStr(0)]=1;else delete x.days[dayStr(0)];write("f_habits",hid,x);return true}
   if(e.hasAttribute("data-fp")){var pid=e.getAttribute("data-id"),fk=e.getAttribute("data-fp"),pr=S.f_people[pid];if(!pr)return true;var v=e.value.trim();if(fk==="name"&&!v){render();return true}pr=clone(pr);pr[fk]=v;savedNote(write("f_people",pid,pr));return true}
   if(e.hasAttribute("data-fbset")){var fid=e.getAttribute("data-id"),fr=S.f_feedback[fid];if(!fr)return true;fr=clone(fr);fr[e.getAttribute("data-fbset")]=e.value.trim();savedNote(write("f_feedback",fid,fr));return true}
@@ -2404,8 +2410,11 @@ function profDetail(op){
   secs.forEach(function(s){s[1].forEach(function(f){tot++;if(p[f[0]])filled++})});
   var h='<div class="row"><button class="btn ghost" data-act="fp-close">← All profiles</button></div>';
   h+='<div class="card fphero">'+avatar(p,true)+'<div class="fphero-main"><div class="row fwrap"><div class="f" style="flex:2 1 200px"><label for="fp-name">Name</label><input type="text" id="fp-name" data-fp="name" data-id="'+op+'" value="'+esc(p.name)+'"></div><div class="f" style="flex:1 1 160px"><label for="fp-bday">Birthday</label><input type="date" id="fp-bday" data-fp="birthday" data-id="'+op+'" value="'+esc(p.birthday||"")+'"></div></div><p class="small muted" style="margin:6px 0 0">'+esc(pAgeLine(p))+' · '+filled+' of '+tot+' details filled in. Birthdays show on the Calendar and Gifts tab.</p>'+(p.kind!=="pet"?'<label class="gshare" style="margin-top:8px"><input type="checkbox" data-fpschool="'+op+'"'+(schoolOn(p)?" checked":"")+'> Goes to school <span class="small muted">· adds a School tab with teachers and a class schedule</span></label>':"")+'</div></div>';
-  var sOn=schoolOn(p);if(!sOn||!ui.psec)ui.psec=sOn?"school":"info";
-  if(sOn){h+=tog("psec",[["school","School"],["info","Health, sizes and more"]]);if(ui.psec==="school")return h+schoolHtml(p)+'<p class="small muted">Changes save when you leave a box. Both of you can see and edit profiles.</p>'}
+  var sOn=schoolOn(p),nd=(p.docs||[]).length,ptabs=(sOn?[["school","School"]]:[]).concat([["info",p.kind==="pet"?"Details":"Health, sizes and more"],["files","Files and links"+(nd?" ("+nd+")":"")]]);
+  if(!ui.psec||!ptabs.some(function(t){return t[0]===ui.psec}))ui.psec=ptabs[0][0];
+  h+=tog("psec",ptabs);
+  if(ui.psec==="school")return h+schoolHtml(p)+'<p class="small muted">Changes save when you leave a box. Both of you can see and edit profiles.</p>';
+  if(ui.psec==="files")return h+pfilesHtml(p);
   h+='<div class="grid g2 fpsecs">'+secs.map(function(s){return'<div class="card"><h3>'+s[0]+'</h3><div class="fpfields">'+s[1].map(function(f){var id="fp-"+f[0];return'<div class="f'+(f[2]?" wide":"")+'"><label for="'+id+'">'+f[1]+'</label>'+(f[2]?'<textarea id="'+id+'" rows="2" data-fp="'+f[0]+'" data-id="'+op+'">'+esc(p[f[0]]||"")+'</textarea>':'<input type="text" id="'+id+'" data-fp="'+f[0]+'" data-id="'+op+'" value="'+esc(p[f[0]]||"")+'">')+'</div>'}).join("")+'</div></div>'}).join("")+'</div>';
   h+='<p class="small muted">Changes save when you leave a box. Both of you can see and edit profiles.</p><div class="row"><button class="btn danger" data-act="del" data-coll="f_people" data-id="'+op+'">'+(ui.confirm==="f_people/"+op?"Confirm: delete "+esc(p.name):"Delete profile")+'</button></div>';
   return h;
@@ -2431,8 +2440,8 @@ function schoolHtml(p){
   var op=p.id,inp=function(f){var t=f[0]==="semail"?"email":f[0]==="sphone"?"tel":"text";return'<div class="f"><label for="fp-'+f[0]+'">'+f[1]+'</label><input type="text"'+(t!=="text"?' inputmode="'+t+'"':"")+(f[0]==="sweb"?' inputmode="url"':"")+' id="fp-'+f[0]+'" data-fp="'+f[0]+'" data-id="'+op+'" value="'+esc(p[f[0]]||"")+'"></div>'};
   var h='<div class="card"><div class="spread"><h3 style="margin:0">'+esc(p.school||"School")+'</h3><div class="row">'+contactLinks(p.sphone,p.semail)+(p.sweb?'<a class="btn" style="padding:4px 12px;font-size:.8rem" href="'+esc(/^https?:\/\//.test(p.sweb)?p.sweb:"https://"+p.sweb)+'" target="_blank" rel="noopener">Website</a>':"")+'</div></div><div class="fpfields" style="margin-top:12px">'+SFIELDS.map(inp).join("")+'</div></div>';
   var ts=p.teachers||[];
-  h+='<div class="card"><h3 style="margin-top:0">Teachers</h3>'+(ts.length?'<div class="col">'+ts.map(function(t,i){var fld=function(k,l,ph){return'<div class="f"><label for="pt-'+i+'-'+k+'">'+l+'</label><input type="text"'+(k==="email"?' inputmode="email"':k==="phone"?' inputmode="tel"':"")+' id="pt-'+i+'-'+k+'" data-ptch="'+i+'" data-k="'+k+'" data-id="'+op+'" value="'+esc(t[k]||"")+'" placeholder="'+ph+'"></div>'};return'<div class="mini"><div class="spread"><b>'+esc(t.name||"Teacher")+'</b><button class="btn ghost" style="padding:2px 8px;font-size:.8rem" data-act="pt-rm" data-id="'+op+'" data-i="'+i+'">'+(ui.confirm==="pt/"+op+"/"+i?"Confirm remove":"Remove")+'</button></div><div class="fpfields four">'+fld("name","Name","")+fld("role","Teaches","Homeroom, math, French")+fld("email","Email","")+fld("phone","Phone or extension","")+'</div>'+(t.email||t.phone?'<div class="row">'+contactLinks(t.phone,t.email)+'</div>':"")+'</div>'}).join("")+'</div>':'<p class="small muted">No teachers added yet.</p>');
-  h+='<form class="add" data-form="pteach" data-id="'+op+'" style="margin-top:10px"><input type="text" id="ptn-name" class="keep" placeholder="Teacher name" aria-label="Teacher name" style="flex:2 1 160px"><input type="text" id="ptn-role" class="keep" placeholder="Teaches" aria-label="What they teach" style="flex:1 1 130px"><input type="text" inputmode="email" id="ptn-email" class="keep" placeholder="Email" aria-label="Email" style="flex:2 1 180px"><input type="text" inputmode="tel" id="ptn-phone" class="keep" placeholder="Phone" aria-label="Phone" style="flex:1 1 120px"><button class="btn" type="submit">Add teacher</button></form></div>';
+  h+='<div class="card"><div class="spread"><h3 style="margin:0">Teachers</h3><span class="pill">'+ts.length+'</span></div><p class="small muted">Add every teacher: homeroom, subject teachers, coaches, the principal.</p>'+(ts.length?'<div class="col">'+ts.map(function(t,i){var fld=function(k,l,ph){return'<div class="f"><label for="pt-'+i+'-'+k+'">'+l+'</label><input type="text"'+(k==="email"?' inputmode="email"':k==="phone"?' inputmode="tel"':"")+' id="pt-'+i+'-'+k+'" data-ptch="'+i+'" data-k="'+k+'" data-id="'+op+'" value="'+esc(t[k]||"")+'" placeholder="'+ph+'"></div>'};return'<div class="mini"><div class="spread"><b>'+esc(t.name||"Teacher")+'</b><button class="btn ghost" style="padding:2px 8px;font-size:.8rem" data-act="pt-rm" data-id="'+op+'" data-i="'+i+'">'+(ui.confirm==="pt/"+op+"/"+i?"Confirm remove":"Remove")+'</button></div><div class="fpfields four">'+fld("name","Name","")+fld("role","Teaches","Homeroom, math, French")+fld("email","Email","")+fld("phone","Phone or extension","")+'</div>'+(t.email||t.phone?'<div class="row">'+contactLinks(t.phone,t.email)+'</div>':"")+'</div>'}).join("")+'</div>':'<p class="small muted">No teachers added yet.</p>');
+  h+='<form class="add" data-form="pteach" data-id="'+op+'" style="margin-top:10px"><input type="text" id="ptn-name" class="keep" placeholder="Teacher name" aria-label="Teacher name" style="flex:2 1 160px"><input type="text" id="ptn-role" class="keep" placeholder="Teaches" aria-label="What they teach" style="flex:1 1 130px"><input type="text" inputmode="email" id="ptn-email" class="keep" placeholder="Email" aria-label="Email" style="flex:2 1 180px"><input type="text" inputmode="tel" id="ptn-phone" class="keep" placeholder="Phone" aria-label="Phone" style="flex:1 1 120px"><button class="btn" type="submit">'+(ts.length?"Add another teacher":"Add teacher")+'</button></form></div>';
   var sc=p.sched||[];
   h+='<div class="card"><div class="head"><h2>Class schedule</h2><p class="muted small">One row per period. Fill in the time and what happens each day; leave a box empty if it is the same as the day before or not needed.</p></div>';
   h+=sc.length?'<div class="tablewrap"><table class="ctab fsched"><thead><tr><th>Time</th>'+SDAYS.map(function(d){return"<th>"+d+"</th>"}).join("")+'<th></th></tr></thead><tbody>'+sc.map(function(r,i){return'<tr><td><input type="text" aria-label="Time, period '+(i+1)+'" data-psch="'+i+'" data-c="t" data-id="'+op+'" value="'+esc(r.t||"")+'" placeholder="8:45"></td>'+SDAYS.map(function(d,j){return'<td><input type="text" aria-label="'+d+', period '+(i+1)+'" data-psch="'+i+'" data-c="'+j+'" data-id="'+op+'" value="'+esc((r.d||[])[j]||"")+'"></td>'}).join("")+'<td><button class="btn ghost" aria-label="Remove row" data-act="ps-rm" data-id="'+op+'" data-i="'+i+'">×</button></td></tr>'}).join("")+'</tbody></table></div>':'<p class="small muted">No schedule yet.</p>';
@@ -2455,6 +2464,37 @@ function schoolChange(e){
   if(e.hasAttribute("data-fpschool")){var pid=e.getAttribute("data-fpschool"),on=e.checked;savePerson(pid,function(p){p.schoolOn=on});ui.psec=on?"school":"info";return true}
   if(e.hasAttribute("data-ptch")){var i=+e.getAttribute("data-ptch"),k=e.getAttribute("data-k"),v=e.value.trim();savedNote(savePerson(e.getAttribute("data-id"),function(p){if(p.teachers&&p.teachers[i])p.teachers[i][k]=v}));return true}
   if(e.hasAttribute("data-psch")){var ri=+e.getAttribute("data-psch"),c=e.getAttribute("data-c"),sv=e.value.trim();savedNote(savePerson(e.getAttribute("data-id"),function(p){var r=(p.sched||[])[ri];if(!r)return;if(c==="t")r.t=sv;else{r.d=r.d||["","","","",""];r.d[+c]=sv}}));return true}
+  return false;
+}
+/* ---------- profile files and links ---------- */
+var PDCAT=["Receipt","Medical","School","Insurance","ID and documents","Photo","Other"];
+function pfKind(d){if(d.kind==="link")return"Link";var t=d.type||"",n=(d.name||"").toLowerCase();if(/^image\//.test(t))return"Image";if(/pdf/.test(t)||/\.pdf$/.test(n))return"PDF";return"File"}
+function pfilesHtml(p){
+  var op=p.id,ds=(p.docs||[]).map(function(d,i){d.i=i;return d}),f=ui.pdf||"all",cats=PDCAT.filter(function(c){return ds.some(function(d){return d.cat===c})});
+  var h='<div class="card"><div class="head"><h2>Add a file or link</h2><p class="muted small">Receipts, report cards, vet records, insurance, prescriptions. Files are stored privately for the family: only you and Patrick can open them. Up to 20 MB each.</p></div>';
+  h+='<div class="row fwrap"><div class="f" style="flex:0 1 190px"><label for="pf-cat">Type</label><select id="pf-cat" class="keep">'+PDCAT.map(function(c){return"<option>"+c+"</option>"}).join("")+'</select></div><div class="f" style="flex:1 1 200px"><label for="pf-note">Note (optional)</label><input type="text" id="pf-note" class="keep" placeholder="Shoes from Sport Chek, keep until March"></div></div>';
+  h+='<div class="row fwrap" style="margin-top:10px">'+(fdb&&fdb.upload?'<div class="f" style="flex:1 1 240px"><label for="pf-file">Upload a file or photo</label><input type="file" id="pf-file" data-id="'+op+'" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.heic"></div>':'<p class="small muted">File uploads are not available in this view.</p>')+(ui.pfBusy?'<span class="small muted">Uploading…</span>':"")+'</div>';
+  h+='<form class="add" data-form="plink" data-id="'+op+'" style="margin-top:10px"><input type="text" id="pl-name" class="keep" placeholder="Link name" aria-label="Link name" style="flex:1 1 160px"><input type="text" inputmode="url" autocomplete="off" id="pl-url" class="keep" placeholder="Paste a link" aria-label="Link address" style="flex:2 1 240px"><button class="btn" type="submit">Add link</button></form></div>';
+  h+=vh("Saved",ds.length+" item"+(ds.length===1?"":"s"));
+  if(cats.length>1)h+=tog("pdf",[["all","All"]].concat(cats.map(function(c){return[c,c]})));
+  var sh=ds.filter(function(d){return f==="all"||d.cat===f}).sort(function(a,b){return(b.date||"").localeCompare(a.date||"")});
+  h+=sh.length?'<div class="grid g3 fill">'+sh.map(function(d){var k=pfKind(d),href=d.kind==="link"?d.url:d.blob;return'<div class="mini pfdoc">'+(k==="Image"?'<a href="'+esc(href)+'" target="_blank" rel="noopener" class="pfthumb"><img src="'+esc(href)+'" alt="'+esc(d.name)+'" loading="lazy"></a>':'<a href="'+esc(href)+'" target="_blank" rel="noopener" class="pfthumb pfnone"><span>'+k+'</span></a>')+'<b style="overflow-wrap:anywhere">'+esc(d.name)+'</b><span class="small muted">'+esc(d.cat||"Other")+' · '+esc(d.date||"")+(d.byName?" · "+esc(d.byName):"")+'</span>'+(d.note?'<span class="small">'+esc(d.note)+'</span>':"")+'<div class="row"><a class="btn" style="padding:4px 12px;font-size:.8rem;text-decoration:none" href="'+esc(href)+'" target="_blank" rel="noopener">Open</a><button class="btn ghost" style="padding:4px 10px;font-size:.8rem" data-act="pd-rm" data-id="'+op+'" data-i="'+d.i+'">'+(ui.confirm==="pd/"+op+"/"+d.i?"Confirm remove":"Remove")+'</button></div></div>'}).join("")+'</div>':'<div class="empty small">'+(ds.length?"Nothing of this type.":"Nothing saved yet.")+'</div>';
+  return h;
+}
+function pfClick(a,id,b){
+  if(a==="pd-rm"){var i=+b.getAttribute("data-i"),k="pd/"+id+"/"+i;if(ui.confirm!==k){ui.confirm=k;render();return true}ui.confirm=null;var d=((S.f_people[id]||{}).docs||[])[i];savePerson(id,function(p){(p.docs||[]).splice(i,1)}).then(function(ok){if(ok&&d&&d.fid&&fdb.removeFile)fdb.removeFile(d.fid).catch(function(){})});return true}
+  return false;
+}
+function pfSubmit(k,id,f){
+  if(k==="plink"){var u=val("pl-url");if(!u)return true;if(!/^https?:\/\//i.test(u))u="https://"+u;if(/[\s"<>]/.test(u)){ui.err="That does not look like a web address.";render();return true}
+    var d={kind:"link",name:val("pl-name")||u.replace(/^https?:\/\//,"").split("/")[0],url:u,cat:val("pf-cat")||"Other",note:val("pf-note"),date:today(),by:famMe(),byName:memName(famMe())};
+    savePerson(id,function(p){(p.docs=p.docs||[]).push(d)},"Link saved.");["pl-name","pl-url","pf-note"].forEach(function(x){document.getElementById(x).value=""});return true}
+  return false;
+}
+function pfChange(e){
+  if(e.id==="pf-file"){var fl=e.files&&e.files[0],pid=e.getAttribute("data-id");if(!fl||!fdb||!fdb.upload||!S.f_people[pid])return true;if(fl.size>20*1024*1024){ui.err="That file is over 20 MB. Choose a smaller one.";render();return true}
+    var cat=val("pf-cat")||"Other",note=val("pf-note");ui.pfBusy=true;render();
+    fdb.upload(fl).then(function(r){ui.pfBusy=false;return savePerson(pid,function(p){(p.docs=p.docs||[]).push({kind:"file",fid:r.id,blob:r.url,name:fl.name,type:r.contentType,size:r.sizeBytes,cat:cat,note:note,date:today(),by:famMe(),byName:memName(famMe())})},"Uploaded.")}).then(function(){var n=document.getElementById("pf-note");if(n)n.value=""},function(){ui.pfBusy=false;ui.err="That file could not be uploaded. Try again.";render()});return true}
   return false;
 }
 /* ---------- shared items (lists, packing, trip plans) ---------- */
@@ -2755,7 +2795,7 @@ if(a==="g-check"){var gg=goal(did),key=e.getAttribute("data-list"),i=+e.getAttri
 
 view.addEventListener("click",function(ev){
   var b=ev.target.closest("button[data-act]");
-  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="mod-rm"||b.getAttribute("data-act")==="cn-del"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"||b.getAttribute("data-act")==="fi-clear"||b.getAttribute("data-act")==="pt-rm"||b.getAttribute("data-act")==="ft-del"))){ui.confirm=null;if(!b){render();return}}
+  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="mod-rm"||b.getAttribute("data-act")==="cn-del"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"||b.getAttribute("data-act")==="fi-clear"||b.getAttribute("data-act")==="pt-rm"||b.getAttribute("data-act")==="pd-rm"||b.getAttribute("data-act")==="ft-del"))){ui.confirm=null;if(!b){render();return}}
   if(!b)return;
   var a=b.getAttribute("data-act"),id=b.getAttribute("data-id");
   if(famClick(a,id,b))return;

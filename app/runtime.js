@@ -253,6 +253,17 @@
     },
     onInfo: function (cb) { fam.ilisteners.push(cb); famLoad().then(function () { cb(famInfo()); }, function () { cb(null); }); },
     onPartnerGoals: function (cb) { fam.plisteners.push(cb); famLoad().then(function () { cb(partnerList()); }, function () { cb([]); }); },
+    upload: function (file) {
+      return famLoad().then(function () {
+        if (!fam.space) throw new Error("No family space");
+        var id = uid(), sp = fam.space;
+        return sb.storage.from("files").upload("family/" + sp + "/" + id, file, { contentType: file.type || "application/octet-stream", upsert: false }).then(function (r) {
+          if (r.error) throw r.error;
+          return { id: id, url: "_blob/fam/" + sp + "/" + id, contentType: file.type || "application/octet-stream", sizeBytes: file.size };
+        });
+      });
+    },
+    removeFile: function (id) { return sb.storage.from("files").remove(["family/" + fam.space + "/" + id]); },
     setName: function (name) { return sb.from("space_members").update({ display_name: name }).eq("space_id", fam.space).eq("user_id", session.user.id).then(function (r) { if (r.error) throw r.error; fam.members.forEach(function (m) { if (m.user_id === session.user.id) m.display_name = name; }); emitInfo(); emitPartner(); }); },
   };
 

@@ -300,6 +300,39 @@
     },
   };
 
+  /* ---------- push: notifications on this device (Web Push) ---------- */
+  function b64ToBytes(b) { var p = "=".repeat((4 - b.length % 4) % 4), s = atob((b + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  var push = {
+    supported: function () { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!cfg.VAPID_PUBLIC_KEY; },
+    state: function () {
+      if (!push.supported()) return Promise.resolve({ supported: false, permission: "unsupported", on: false });
+      return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+        if (!sub) return { supported: true, permission: Notification.permission, on: false };
+        return sb.from("push_subs").select("endpoint").eq("endpoint", sub.endpoint).maybeSingle().then(function (r) { return { supported: true, permission: Notification.permission, on: !!r.data }; });
+      });
+    },
+    enable: function () {
+      if (!push.supported()) return Promise.reject(new Error("unsupported"));
+      return Notification.requestPermission().then(function (p) {
+        if (p !== "granted") throw new Error(p === "denied" ? "denied" : "dismissed");
+        return navigator.serviceWorker.ready;
+      }).then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(cfg.VAPID_PUBLIC_KEY) }); });
+      }).then(function (sub) {
+        var j = sub.toJSON();
+        return sb.from("push_subs").upsert({ endpoint: j.endpoint, user_id: session.user.id, p256dh: j.keys.p256dh, auth: j.keys.auth, ua: navigator.userAgent.slice(0, 200) }, { onConflict: "endpoint" }).then(function (r) { if (r.error) throw r.error; });
+      }).then(function () { return push.notify("test"); });
+    },
+    disable: function () {
+      return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+        if (!sub) return;
+        var ep = sub.endpoint;
+        return sub.unsubscribe().then(function () { return sb.from("push_subs").delete().eq("endpoint", ep); });
+      });
+    },
+    notify: function (kind, id) { return sb.functions.invoke("notify", { body: { kind: kind, id: id } }).then(function (r) { if (r.error) throw r.error; return r.data; }); },
+  };
+
   /* ---------- window.claude ---------- */
   window.claude = {
     use: function (name) {
@@ -310,6 +343,7 @@
         if (name === "downloads") return downloads;
         if (name === "user") return { can: function () { return Promise.resolve(true); } };
         if (name === "family") return family;
+        if (name === "push") return push;
         return null;
       });
     },

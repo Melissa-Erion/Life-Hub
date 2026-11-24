@@ -650,6 +650,10 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+.navcount{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--navbar);color:#fff;font-family:var(--display);font-weight:800;font-size:.7rem;letter-spacing:0;margin-left:8px}
+#menu{position:relative}#menu .navcount{position:absolute;top:-6px;right:-6px;margin:0}
+.fbnew{border-color:var(--navbar)}.fbnewpill{background:var(--navbar);color:#fff;border-color:var(--navbar)}
+
 .giftgrid{align-items:stretch}
 .giftcard{gap:10px}
 .gchead{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:2px solid var(--ink)}
@@ -662,9 +666,10 @@ span.dot{display:inline-block;cursor:default}
 .giftrow .gr-del{padding:4px 8px}
 .giftrow.isdone b{text-decoration:line-through;color:var(--muted)}
 .giftrow .pill{font-size:.6rem;padding:1px 6px}
-form.gq{gap:6px}
+form.gq{gap:6px;align-items:center}
 form.gq .gqpriv{flex:0 0 auto;font-size:.84rem}
-@media (max-width:760px){.card > form.gq > input,.card > form.gq > select{flex:1 1 40% !important}.card > form.gq > input:first-child{flex:1 1 100% !important}.card > form.gq > .btn{flex:0 1 auto}}
+form.gq .gqadd{border-radius:12px;min-height:40px;padding:8px 16px}
+@media (max-width:760px){.card > form.gq > input,.card > form.gq > select{flex:1 1 40% !important}.card > form.gq > input:first-child{flex:1 1 100% !important}.card > form.gq > .gqadd{flex:1 1 auto !important;min-height:44px}}
 
 .famnav{display:flex;flex-direction:column;gap:10px}
 .famg .btn{font-weight:800;padding:9px 16px}
@@ -2177,8 +2182,25 @@ function vFamily(){
   if(t==="trips")h+=famTripsView();
   return h;
 }
+/* Feedback alerts for the space owner: count on the menu, a note when one arrives, and "New" on unseen reports */
+var fbKnown=null,pushApi=null;
+function pushRefresh(){if(!pushApi)return;pushApi.state().then(function(st){ui.push=st;render()},function(){ui.push={supported:false,permission:"unsupported",on:false};render()})}
+function pushCard(){
+  var st=ui.push,h='<div class="card"><div class="spread"><h3 style="margin:0">Notifications on this device</h3>'+(st&&st.on?'<span class="pill">On</span>':"")+'</div><p class="small">Get a notification on this phone or computer when someone in the family sends feedback, even when the app is closed. Turn it on once on each device you use.</p>';
+  if(!pushApi||!st)return h+'<p class="small muted">Checking this device…</p></div>';
+  if(devKind()==="ios"&&!isInstalled())return h+'<p class="small"><b>On iPhone and iPad, notifications only work from the installed app.</b> Add Life Hub to your home screen first (steps below, under Install the app), open it from the icon, then come back here.</p></div>';
+  if(!st.supported)return h+'<p class="small muted">This browser does not support notifications. Try Chrome, Edge or Safari, or the installed app.</p></div>';
+  if(st.permission==="denied")return h+'<p class="small"><b>Notifications are blocked for Life Hub on this device.</b> Allow them in the browser or phone settings for this site, then reload the app.</p></div>';
+  if(st.on)return h+'<div class="row"><button class="btn" data-act="push-test">Send a test notification</button><button class="btn ghost" data-act="push-off">Turn off on this device</button></div></div>';
+  return h+'<div class="row"><button class="btn primary" data-act="push-on"'+(ui.pushBusy?" disabled":"")+'>'+(ui.pushBusy?"Turning on…":"Turn on notifications")+'</button></div><p class="small muted">Your device will ask you to allow notifications. Tap Allow.</p></div>';
+}
+function fbUnread(){if(!FAM||!famOwner())return 0;var seen=pdoc("fbseen").at||"";return list("f_feedback").filter(function(x){return x.by!==famMe()&&(x.at||"")>seen}).length}
+function fbWatch(o){var ids=Object.keys(o);if(fbKnown===null){fbKnown=ids;return}var fresh=ids.filter(function(k){return fbKnown.indexOf(k)<0&&o[k].by!==famMe()});fbKnown=ids;if(fresh.length&&FAM&&famOwner())flash("New feedback from "+(o[fresh[0]].byName||"the family")+". Open Feedback to read it.")}
+function fbBadges(){var n=fbUnread(),a=document.querySelector('nav a[href="#help"]');if(a){var c=a.querySelector(".navcount");if(n){if(!c){c=document.createElement("span");c.className="navcount";a.appendChild(c)}c.textContent=n}else if(c)c.remove()}
+  var m=document.getElementById("menu");if(m){var mc=m.querySelector(".navcount");if(n){if(!mc){mc=document.createElement("span");mc.className="navcount";m.appendChild(mc)}mc.textContent=n}else if(mc)mc.remove()}}
 function vHelp(){
   var h='<div class="head"><h1>Feedback</h1><p class="muted">Found something broken, or want something added? Write it here. Everyone in the family can see these.</p></div>';
+  if(FAM&&famOwner()){h+=vh("Notifications","new feedback");h+=pushCard()}
   h+=vh("Install the app","home screen icon");h+=installHtml();
   h+=vh("Tour","every page explained");
   h+='<div class="card"><p class="small">A step-by-step walk through each page and what it is for. It takes about three minutes.</p><div class="row"><button class="btn primary" data-act="tour">Start the tour</button></div></div>';
@@ -2186,10 +2208,12 @@ function vHelp(){
   var opts=Object.keys(VIEWS).filter(function(k){return k!=="help"}).map(function(k){return'<option value="'+k+'">'+esc(NAMES[k]||k)+'</option>'}).join("");
   h+=vh("New report");
   h+='<div class="card"><form class="fform" data-form="fb"><div class="row fwrap"><div class="f"><label for="fb-kind">Type</label><select id="fb-kind" class="keep"><option value="bug">Something is broken</option><option value="idea">Idea or feature request</option></select></div><div class="f"><label for="fb-page">Which page</label><select id="fb-page" class="keep"><option value="">Not sure or whole app</option>'+opts+'</select></div></div><div class="f"><label for="fb-text">What happened, or what would you like?</label><textarea id="fb-text" class="keep" rows="4" placeholder="For a problem: what you did, what you expected, what happened instead. Which device you were on helps too."></textarea></div><div class="row"><button class="btn primary" type="submit">Send report</button></div></form></div>';
+  if(famOwner()){if(ui.fbPrevSeen==null)ui.fbPrevSeen=pdoc("fbseen").at||"";if(fbUnread())setTimeout(function(){savePlan("fbseen",function(d){d.at=new Date().toISOString()})},400)}
   var fb=list("f_feedback").sort(function(a,b){return((a.status==="done"?"1":"0")+b.at).localeCompare((b.status==="done"?"1":"0")+a.at)}),own=famOwner(),ST={"new":"New","planned":"Planned","done":"Done","no":"Not doing"};
   h+=vh("Reports",fb.filter(function(x){return x.status!=="done"&&x.status!=="no"}).length+" open");
   h+=fb.length?'<div class="grid g2 fill">'+fb.map(function(x){var mineR=x.by===famMe();
-    var c='<div class="mini"><div class="spread"><b>'+(x.kind==="idea"?"Idea":"Problem")+(x.page&&NAMES[x.page]?" · "+esc(NAMES[x.page]):"")+'</b><span class="pill">'+esc(ST[x.status||"new"])+'</span></div><span class="small muted">'+esc(x.byName||"")+" · "+esc(x.date||"")+'</span><p class="small fnotes">'+esc(x.text)+'</p>';
+    var isNew=famOwner()&&ui.fbPrevSeen!=null&&x.by!==famMe()&&(x.at||"")>ui.fbPrevSeen;
+    var c='<div class="mini'+(isNew?" fbnew":"")+'"><div class="spread"><b>'+(x.kind==="idea"?"Idea":"Problem")+(x.page&&NAMES[x.page]?" · "+esc(NAMES[x.page]):"")+'</b><span class="pill'+(isNew?" fbnewpill":"")+'">'+(isNew?"Just in":esc(ST[x.status||"new"]))+'</span></div><span class="small muted">'+esc(x.byName||"")+" · "+esc(x.date||"")+'</span><p class="small fnotes">'+esc(x.text)+'</p>';
     if(x.reply&&!own)c+='<p class="small"><b>Reply:</b> '+esc(x.reply)+'</p>';
     if(own)c+='<div class="row fwrap"><div class="f"><label for="fbs-'+x.id+'">Status</label><select id="fbs-'+x.id+'" data-fbset="status" data-id="'+x.id+'">'+Object.keys(ST).map(function(k){return'<option value="'+k+'"'+((x.status||"new")===k?" selected":"")+'>'+ST[k]+'</option>'}).join("")+'</select></div><div class="f"><label for="fbr-'+x.id+'">Reply</label><input type="text" id="fbr-'+x.id+'" data-fbset="reply" data-id="'+x.id+'" value="'+esc(x.reply||"")+'" placeholder="Optional note back"></div></div>';
     if(own||mineR)c+='<button class="btn ghost" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="del" data-coll="f_feedback" data-id="'+x.id+'">'+(ui.confirm==="f_feedback/"+x.id?"Confirm delete":"Delete")+'</button>';
@@ -2211,6 +2235,9 @@ function famClick(a,id,b){
   if(a==="fh-day"){var x=S.f_habits[id];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};var dk=b.getAttribute("data-d");if(x.days[dk])delete x.days[dk];else x.days[dk]=1;write("f_habits",id,x);return true}
   if(a==="tour"){tourStart();return true}
   if(a==="inst-go"){installGo();return true}
+  if(a==="push-on"){if(!pushApi)return true;ui.pushBusy=true;render();pushApi.enable().then(function(){ui.pushBusy=false;flash("Notifications are on. A test one is on its way.");pushRefresh()},function(e){ui.pushBusy=false;var m=e&&e.message;ui.err=m==="denied"?"Notifications were blocked. Allow them in your settings for this site, then try again.":m==="dismissed"?"Notifications were not allowed. Tap the button again and choose Allow.":"Notifications could not be turned on on this device.";pushRefresh()});return true}
+  if(a==="push-off"){if(!pushApi)return true;pushApi.disable().then(function(){flash("Notifications are off on this device.");pushRefresh()});return true}
+  if(a==="push-test"){if(!pushApi)return true;pushApi.notify("test").then(function(r){flash(r&&r.sent?"Test sent. It should appear in a few seconds.":"Could not reach this device. Turn notifications off and on again.")},function(){flash("The test could not be sent.")});return true}
   return false;
 }
 function famSubmit(k,id,f){
@@ -2225,7 +2252,7 @@ function famSubmit(k,id,f){
     render();return true}
   if(k==="fperson"){var nm=val("fpn-name");if(!nm)return true;var nid2=newId();write("f_people",nid2,{name:nm,kind:val("fpn-kind")||"person",birthday:"",order:9,created:today()}).then(function(ok){if(ok){ui.fperson=nid2;render()}});document.getElementById("fpn-name").value="";return true}
   if(k==="fb"){var tx=val("fb-text");if(!tx){ui.err="Write a few words about it first.";render();return true}
-    write("f_feedback",newId(),{kind:val("fb-kind")||"bug",page:val("fb-page"),text:tx,by:famMe(),byName:memName(famMe()),date:today(),at:new Date().toISOString(),status:"new",device:navigator.userAgent.slice(0,160),width:innerWidth}).then(function(ok){if(ok)flash("Sent. Thank you.")});document.getElementById("fb-text").value="";return true}
+    var fbid=newId();write("f_feedback",fbid,{kind:val("fb-kind")||"bug",page:val("fb-page"),text:tx,by:famMe(),byName:memName(famMe()),date:today(),at:new Date().toISOString(),status:"new",device:navigator.userAgent.slice(0,160),width:innerWidth}).then(function(ok){if(ok){flash("Sent. Thank you.");if(pushApi&&!famOwner())pushApi.notify("feedback",fbid).catch(function(){})}});document.getElementById("fb-text").value="";return true}
   return false;
 }
 function famChange(e){
@@ -2519,7 +2546,7 @@ function famGiftsView(){
     var p=ppl.filter(function(x){return x.name===n})[0],items=(byP[n]||[]).sort(function(a,b){return(a.status==="given")-(b.status==="given")||(a.occasion||"").localeCompare(b.occasion||"")||(a.idea||"").localeCompare(b.idea||"")}),all=gs.filter(function(g){return(g.forName||"Someone")===n&&g.status!=="given"}),tot=all.reduce(function(t,g){return t+num(g.price)},0),nb=p?nextBday(p.birthday):null;
     var c='<div class="card giftcard"><div class="gchead">'+avatar(p||{name:n})+'<div class="gcname"><b>'+esc(n)+'</b><span class="small muted">'+all.length+' to give'+(tot?' · '+cash(tot):"")+(nb?' · birthday '+esc(whenWord(nb))+(daysTo(nb)>6?" (in "+daysTo(nb)+" days)":""):"")+'</span></div></div>';
     c+=items.length?'<div class="giftrows">'+items.map(giftRow).join("")+'</div>':'<p class="small muted">'+(f==="given"?"Nothing given yet.":"No gift ideas yet.")+'</p>';
-    c+='<form class="add gq" data-form="giftq" data-who="'+esc(n)+'"><input type="text" id="gq-'+i+'-idea" class="keep" placeholder="Add a gift for '+esc(n)+'" aria-label="Gift for '+esc(n)+'" style="flex:3 1 160px"><select id="gq-'+i+'-occ" class="keep" aria-label="Occasion" style="flex:1 1 110px">'+GOCC.map(function(o){return"<option"+(o===defOcc?" selected":"")+">"+o+"</option>"}).join("")+'</select><input type="text" inputmode="decimal" id="gq-'+i+'-price" class="keep" placeholder="Price" aria-label="Price (optional)" style="flex:0 1 80px"><label class="gshare gqpriv"><input type="checkbox" id="gq-'+i+'-sec"> Private</label><button class="btn" type="submit">Add</button></form></div>';
+    c+='<form class="add gq" data-form="giftq" data-who="'+esc(n)+'"><input type="text" id="gq-'+i+'-idea" class="keep" placeholder="Add a gift for '+esc(n)+'" aria-label="Gift for '+esc(n)+'" style="flex:3 1 160px"><select id="gq-'+i+'-occ" class="keep" aria-label="Occasion" style="flex:1 1 110px">'+GOCC.map(function(o){return"<option"+(o===defOcc?" selected":"")+">"+o+"</option>"}).join("")+'</select><input type="text" inputmode="decimal" id="gq-'+i+'-price" class="keep" placeholder="Price" aria-label="Price (optional)" style="flex:0 1 80px"><label class="gshare gqpriv"><input type="checkbox" id="gq-'+i+'-sec"> Private</label><button class="btn primary gqadd" type="submit">Add gift</button></form></div>';
     return c}).join("")+'</div>';
   h+=vh("Gift for someone else","not in your profiles");
   var dl='<datalist id="gift-people">'+famPeople().map(function(p){return'<option value="'+esc(p.name)+'">'}).join("")+'</datalist>';
@@ -2786,6 +2813,23 @@ function s6Change(e){
   if(e.hasAttribute("data-cis")){var sk=e.getAttribute("data-cis"),sv=e.value.trim();savedNote(ciSave(function(c){c[sk]=sv}));return true}
   return false;
 }
+/* Phones: shorten long placeholder hints that would be cut off ("Name, for example X" becomes "Name") */
+var phCanvas=null;
+function fitPlaceholders(){
+  var small=innerWidth<=760;
+  view.querySelectorAll("input[placeholder],textarea[placeholder]").forEach(function(e){
+    var full=e.getAttribute("data-ph")||e.getAttribute("placeholder");if(!full)return;
+    if(!small){if(e.getAttribute("data-ph"))e.setAttribute("placeholder",full);return}
+    if(e.tagName==="TEXTAREA"){return}
+    var cs=getComputedStyle(e),w=e.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-4;if(w<=0)return;
+    phCanvas=phCanvas||document.createElement("canvas");var cx=phCanvas.getContext("2d");cx.font=cs.fontWeight+" "+cs.fontSize+" "+cs.fontFamily;
+    if(cx.measureText(full).width<=w){if(e.getAttribute("data-ph"))e.setAttribute("placeholder",full);return}
+    e.setAttribute("data-ph",full);
+    var opts=[full.split(/,\s*for example|\s+for example|,\s*e\.g\./i)[0],full.split(",")[0],full.split(/[,(:·]/)[0]];
+    var pick=opts.filter(function(o){return o&&cx.measureText(o.trim()).width<=w})[0]||opts[opts.length-1];
+    e.setAttribute("placeholder",pick.trim());
+  });
+}
 /* Swipe hints under sideways rows on phones */
 function railHints(){
   view.querySelectorAll(".swipehint").forEach(function(x){x.remove()});
@@ -2894,7 +2938,7 @@ function render(){
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
   view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal],textarea[data-cnf]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
-  railHints();
+  railHints();fbBadges();fitPlaceholders();
   if(innerWidth<=760)view.querySelectorAll('.jump > .btn.on').forEach(function(bt){var j=bt.parentNode;if(j.scrollWidth<=j.clientWidth)return;var jr=j.getBoundingClientRect(),br=bt.getBoundingClientRect();if(br.left<jr.left+12||br.right>jr.right-12)j.scrollLeft+=br.left-jr.left-16});
   if(ui.scrollTo){var se=document.getElementById(ui.scrollTo);ui.scrollTo=null;if(se&&se.scrollIntoView)se.scrollIntoView({block:"start"})}
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e&&keep[id]!==""){e.value=keep[id]}});
@@ -3242,7 +3286,8 @@ function start(){
   window.claude.use("downloads").then(function(d){if(d){saver=d;render()}});
   window.claude.use("assets").then(function(a){if(a){store=a;render()}});
   window.claude.use("sample").then(function(s){if(s){ask=s;render()}});
-  window.claude.use("family").then(function(f){if(!f)return;fdb=f;FCOLLS.forEach(function(c){f.collection(c).onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=x.data()});S[c]=o;render()},function(){})});f.onInfo(function(i){FAM=i&&i.space?i:null;render()});f.onPartnerGoals(function(l){S.pgoals=l||[];render()})}).catch(function(){});
+  window.claude.use("push").then(function(p){if(p){pushApi=p;pushRefresh()}}).catch(function(){});
+  window.claude.use("family").then(function(f){if(!f)return;fdb=f;FCOLLS.forEach(function(c){f.collection(c).onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=x.data()});if(c==="f_feedback")fbWatch(o);S[c]=o;render()},function(){})});f.onInfo(function(i){FAM=i&&i.space?i:null;render()});f.onPartnerGoals(function(l){S.pgoals=l||[];render()})}).catch(function(){});
   window.claude.use("user").then(function(u){if(u&&u.can)return u.can("data.write").then(function(v){if(v===false){canWrite=false;render()}})}).catch(function(){});
 }
 (function(){

@@ -127,3 +127,11 @@ Personal (Money page, Investing tab) and family (Family, Money, Investing) share
 - Investment: `{name, sym, qty, kind, acct, where, own (family only, person id or "" for joint), invested, value, updated, hist:[{d,v}], notes}`. "Update" sets the value and adds a history point for today; "Add money" raises both invested and value and logs it.
 - Log: `{hold, name, amount, date, at, by, byName}`. Watchlist: `{name, sym, why, link, date, by, byName}`.
 - The trend line is built from each investment's history (`invTrend`). Values are entered by hand; nothing is fetched. It records and totals only, with no advice wording.
+
+## Notifications
+
+- Feedback badge: `fbUnread()` counts reports from others newer than `plans/fbseen.at` (owner only). `fbBadges()` puts the count on the Feedback menu link and the phone menu button; opening Feedback marks them seen. A note pops up when one arrives while the app is open (`fbWatch`).
+- Phone and desktop notifications use Web Push. `window.claude.use("push")` (runtime.js) has `state()`, `enable()`, `disable()` and `notify(kind,id)`. Devices are stored in `public.push_subs` (one row per device, owner-only RLS).
+- The `notify` edge function (supabase/functions/notify) checks the caller, then sends to the right people: `kind:"test"` goes to the caller's own devices; `kind:"feedback"` goes to the space owner(s) other than the sender, and only for a report the caller wrote. Dead devices (404/410) are removed.
+- The VAPID public key is in `config.js`; the private key is in `private.app_secrets`, readable only by the service role through `public.lh_secret()`. It is not in this repository. The service worker (`sw.js`) shows the notification and opens the Feedback page when it is tapped.
+- iPhone and iPad only allow notifications from the installed home-screen app (iOS 16.4+).

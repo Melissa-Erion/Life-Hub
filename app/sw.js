@@ -1,6 +1,6 @@
 /* Life Hub service worker: caches the app shell so it opens fast and installs,
    and serves /_blob/<id> uploads from private Supabase Storage using the user's token. */
-var CACHE = "lifehub-v4";
+var CACHE = "lifehub-v5";
 var SHELL = ["./", "index.html", "runtime.js", "vendor/supabase.js", "config.js", "library.json", "pathways.json", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", function (e) {
@@ -50,4 +50,21 @@ self.addEventListener("fetch", function (e) {
     if (r.ok) { var copy = r.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
     return r;
   }).catch(function () { return caches.match(req).then(function (r) { return r || caches.match("index.html"); }); }));
+});
+
+/* Notifications sent by the notify function */
+self.addEventListener("push", function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { title: "Life Hub", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "Life Hub", {
+    body: d.body || "", tag: d.tag || undefined, icon: "icons/icon-192.png", badge: "icons/icon-192.png", data: { url: d.url || "./index.html" }
+  }));
+});
+self.addEventListener("notificationclick", function (e) {
+  e.notification.close();
+  var target = new URL((e.notification.data && e.notification.data.url) || "./index.html", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) { if ("focus" in list[i]) { list[i].navigate(target).catch(function () {}); return list[i].focus(); } }
+    return self.clients.openWindow(target);
+  }));
 });

@@ -16,12 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.first_try.outputs.page_url || steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app
+      # GitHub sometimes cannot see the just-uploaded files for a few seconds,
+      # so try once, and if that fails wait and try again.
+      - id: first_try
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - if: steps.first_try.outcome == 'failure'
+        run: sleep 30
       - id: deployment
+        if: steps.first_try.outcome == 'failure'
         uses: actions/deploy-pages@v4

@@ -512,6 +512,10 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .chat{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
 details.earlier summary{cursor:pointer;padding:6px 0}
 details.earlier .chat{margin-top:10px}
+/* Skill cards: status dropdown stays beside the name */
+.cols .card > .spread{flex-wrap:nowrap;align-items:flex-start}
+.cols .card > .spread > b{min-width:0;flex:1 1 auto}
+.cols .card > .spread > select{flex:none;width:auto}
 </style>
 </head>
 <body>
@@ -1285,12 +1289,12 @@ function vClaude(){
   var h='<div class="head"><h1>Claude</h1><p class="muted">What Claude can already do for you, what it still needs, and what would make its results better.</p></div>';
   h+=vh("Working together");
   h+='<div class="note"><h3>How we work on this together</h3><p class="small">In any chat, paste this page\'s link and say what you want: "check my Life Hub and tell me what to work on", "log this win", or "add a goal for this". Claude can read and update everything here. Buttons on this page that ask Claude work without leaving the hub.</p></div>';
-  h+='<div class="head"><h2>Skills</h2><p class="muted small">A skill is a saved workflow. Have means it exists today. Needed means building it would improve results in that area.</p></div><div class="cols">';
-  [["have","Have"],["building","Building"],["needed","Needed"]].forEach(function(c){
+  h+='<div class="head"><h2>Skills</h2><p class="muted small">A skill is a saved workflow. Needed means building it would improve results in that area. Have means it exists today.</p></div><div class="cols">';
+  [["needed","Needed"],["building","Building"],["have","Have"]].forEach(function(c){
     var items=sk.filter(function(s){return s.status===c[0]});
     h+='<div class="col"><div class="row"><h3>'+c[1]+'</h3><span class="pill">'+items.length+'</span></div>';
     if(!items.length)h+='<div class="empty small">None</div>';
-    items.forEach(function(s){h+='<div class="card"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(s.name)+'</b><select aria-label="Status of '+esc(s.name)+'" data-sstatus="'+s.id+'">'+["have","building","needed"].map(function(x){return'<option'+(s.status===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div><p class="small">'+esc(s.does||"")+'</p>'+(s.gap?'<p class="small muted"><b>To build it:</b> '+esc(s.gap)+'</p>':"")+'<div class="spread"><span class="small muted">'+esc(s.area?areaName(s.area):"")+'</span><button class="btn ghost" data-act="del" data-coll="skills" data-id="'+s.id+'">'+(ui.confirm==="skills/"+s.id?"Confirm":"Remove")+'</button></div></div>'});
+    items.forEach(function(s){h+='<div class="card"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(s.name)+'</b><select aria-label="Status of '+esc(s.name)+'" data-sstatus="'+s.id+'">'+["needed","building","have"].map(function(x){return'<option'+(s.status===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div><p class="small">'+esc(s.does||"")+'</p>'+(s.gap?'<p class="small muted"><b>To build it:</b> '+esc(s.gap)+'</p>':"")+'<div class="spread"><span class="small muted">'+esc(s.area?areaName(s.area):"")+'</span><button class="btn ghost" data-act="del" data-coll="skills" data-id="'+s.id+'">'+(ui.confirm==="skills/"+s.id?"Confirm":"Remove")+'</button></div></div>'});
     h+='</div>';
   });
   h+='</div><div class="card"><h2>Add a skill</h2><form class="add" data-form="skill"><div class="f"><label for="sk-name">Name</label><input type="text" id="sk-name" class="keep" placeholder="for example proposal"></div><div class="f" style="flex:2 1 260px"><label for="sk-does">What it does</label><input type="text" id="sk-does" class="keep"></div><div class="f"><label for="sk-area">Area</label><select id="sk-area" class="keep">'+areaOptions(val("sk-area"))+'</select></div><div class="f" style="flex:0 1 130px"><label for="sk-status">Status</label><select id="sk-status" class="keep"><option>needed</option><option>building</option><option>have</option></select></div><button class="btn primary" type="submit">Add skill</button></form></div>';

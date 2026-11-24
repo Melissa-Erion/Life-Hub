@@ -33,6 +33,7 @@ Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, h
 | `n-targets`, `n-<weekstart>`, `n-saved` | Nutrition targets, week, saved meals |
 | `ci-fields` | Check-in fields template |
 | `budget`, `networth` | Money |
+| `skrank` | `{order:[{id,why}],at}` — Claude's ranking of which skill to build first |
 | `jpat` | `{reports:[{at,days,summary,patterns:[{title,detail,kind}],blindSpot,strengths,experiments:[{act,why,measure}],question,track}]}` — Journal pattern reviews (last 12). The mentor review reads the latest one. |
 | `jp-<date>` | `{ai:{questions,track,at}}` — the last Ask Claude journal suggestions for that day |
 | `social` | `{profiles:[{id,name}]}` — the Social account tabs (default one is `personal`) |
@@ -40,6 +41,7 @@ Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, h
 
 Selected record shapes:
 
+- `skills`: `{name,does,gap,area,status:needed|building|have,prep:[{t,done}],built,tests:[bool,bool],startedAt,haveAt}`. `prep` is made from `gap` when building starts (`skPrep`); `skPrompt` builds the prompt to paste into a Claude chat.
 - `courses`: `{name,provider,url,status:active|paused|done,target,next,why,lessons:[{t,done}],notes:[{date,text}],docs:[{id,name,date}],links,imgs,chats:[{q,a,date,saved}],created}`. `chats` keeps the last 20 Ask Claude answers (`coAsk` sends the course details, lessons and newest notes as context).
 - Study sessions are `tasks` with `course` (course id), `topic`, `dur` (minutes) and `series` when repeated, so they show on the Today calendar, agenda and Planner like any task.
 

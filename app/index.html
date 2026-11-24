@@ -535,6 +535,12 @@ details.earlier .chat{margin-top:10px}
 .patlist{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 .patq{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:8px}
 .grid.fill2{grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+/* Skills board */
+.skstep{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+.skstep .lvl{margin:0}
+.skprompt{width:100%;font-size:.82rem;line-height:1.4}
+details.howto summary{cursor:pointer;font-weight:700}
+details.howto ol{margin:10px 0 6px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 </style>
 </head>
 <body>
@@ -1308,15 +1314,20 @@ function vClaude(){
   var h='<div class="head"><h1>Claude</h1><p class="muted">What Claude can already do for you, what it still needs, and what would make its results better.</p></div>';
   h+=vh("Working together");
   h+='<div class="note"><h3>How we work on this together</h3><p class="small">Claude helps from inside the hub. Use Run mentor review on Today, Suggest a plan on a goal, Capability brief on an area in Explore, Draft a skill in the Library, and Ask Claude inside each course in Learning. Each button sends Claude only what it needs from your hub and saves the answer here.</p><p class="small muted">A regular Claude chat cannot see your hub, because your data lives in your own private database. To get help there, copy in the part you want to talk about.</p></div>';
-  h+='<div class="head"><h2>Skills</h2><p class="muted small">A skill is a saved workflow. Needed means building it would improve results in that area. Have means it exists today.</p></div><div class="cols">';
+  h+='<div class="head"><h2>Skills</h2><p class="muted small">A skill is a saved set of instructions Claude follows every time it does a certain job, so it works your way without you explaining again.</p></div>';
+  h+='<details class="howto card"><summary>How skills work</summary><ol class="small"><li><b>Needed</b> lists skills that would improve the results Claude gives you. Each card says what Claude needs from you.</li><li><b>Start building</b> moves it to Building. Gather what it needs and tick each item off.</li><li><b>Copy the prompt</b> into a Claude chat and attach what you gathered. Claude writes the skill and explains how to add it to your Claude account.</li><li><b>Test it</b> on a real job. When the result matches how you work, mark it as <b>have</b>.</li></ol><p class="small muted">The hub keeps track of your skills. The skill itself lives in your Claude account, where Claude can use it in any chat.</p></details>';
+  var skr={};(pdoc("skrank").order||[]).filter(function(o){return S.skills[o.id]&&S.skills[o.id].status!=="have"}).slice(0,3).forEach(function(o,i){skr[o.id]=i+1});
+  h+=skRankHtml(sk);
+  h+='<div class="cols">';
   [["needed","Needed"],["building","Building"],["have","Have"]].forEach(function(c){
     var items=sk.filter(function(s){return s.status===c[0]});
     h+='<div class="col"><div class="row"><h3>'+c[1]+'</h3><span class="pill">'+items.length+'</span></div>';
     if(!items.length)h+='<div class="empty small">None</div>';
-    items.forEach(function(s){h+='<div class="card"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(s.name)+'</b><select aria-label="Status of '+esc(s.name)+'" data-sstatus="'+s.id+'">'+["needed","building","have"].map(function(x){return'<option'+(s.status===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div><p class="small">'+esc(s.does||"")+'</p>'+(s.gap?'<p class="small muted"><b>To build it:</b> '+esc(s.gap)+'</p>':"")+'<div class="spread"><span class="small muted">'+esc(s.area?areaName(s.area):"")+'</span><button class="btn ghost" data-act="del" data-coll="skills" data-id="'+s.id+'">'+(ui.confirm==="skills/"+s.id?"Confirm":"Remove")+'</button></div></div>'});
+    if(c[0]==="needed")items.sort(function(a,b){return(skr[a.id]||99)-(skr[b.id]||99)||a.name.localeCompare(b.name)});
+    items.forEach(function(s){h+=skCard(s,skr[s.id])});
     h+='</div>';
   });
-  h+='</div><div class="card"><h2>Add a skill</h2><form class="add" data-form="skill"><div class="f"><label for="sk-name">Name</label><input type="text" id="sk-name" class="keep" placeholder="for example proposal"></div><div class="f" style="flex:2 1 260px"><label for="sk-does">What it does</label><input type="text" id="sk-does" class="keep"></div><div class="f"><label for="sk-area">Area</label><select id="sk-area" class="keep">'+areaOptions(val("sk-area"))+'</select></div><div class="f" style="flex:0 1 130px"><label for="sk-status">Status</label><select id="sk-status" class="keep"><option>needed</option><option>building</option><option>have</option></select></div><button class="btn primary" type="submit">Add skill</button></form></div>';
+  h+='</div><div class="card"><h2>Add a skill</h2><form class="add" data-form="skill"><div class="f"><label for="sk-name">Name</label><input type="text" id="sk-name" class="keep" placeholder="for example proposal"></div><div class="f" style="flex:2 1 260px"><label for="sk-does">What it does</label><input type="text" id="sk-does" class="keep"></div><div class="f" style="flex:2 1 260px"><label for="sk-gap">What Claude needs to build it</label><input type="text" id="sk-gap" class="keep" placeholder="for example two past proposals and your prices"></div><div class="f"><label for="sk-area">Area</label><select id="sk-area" class="keep">'+areaOptions(val("sk-area"))+'</select></div><div class="f" style="flex:0 1 130px"><label for="sk-status">Status</label><select id="sk-status" class="keep"><option>needed</option><option>building</option><option>have</option></select></div><button class="btn primary" type="submit">Add skill</button></form></div>';
   var im=list("improve").sort(function(a,b){return(a.status==="done")-(b.status==="done")||a.id.localeCompare(b.id)});
   h+='<div class="card"><div class="head"><h2>Improvement list</h2><p class="muted small">Things that would get you stronger results: what Claude should do differently, and what Claude needs from you.</p></div><ul class="check">';
   if(!im.length)h+='<li class="muted">Nothing here yet.</li>';
@@ -1510,6 +1521,52 @@ function vJDay(d){
   if(S.journal[d])h+='<div><button class="btn danger" data-act="del" data-coll="journal" data-id="'+d+'">'+(ui.confirm==="journal/"+d?"Confirm: delete this entry":"Delete this entry")+'</button></div>';
   return h;
 }
+/* ---------- Skills board helpers ---------- */
+function skPrep(s){
+  if(Array.isArray(s.prep)&&s.prep.length)return s.prep;
+  var g=String(s.gap||"").replace(/\.\s*$/,"").trim();
+  if(!g)return[{t:"Two or three examples of the result you want",done:false}];
+  return g.split(/,\s*|\s+and\s+(?=[a-z0-9])/i).map(function(x){return x.trim()}).filter(Boolean).map(function(x){return{t:x.charAt(0).toUpperCase()+x.slice(1),done:false}});
+}
+function skPrompt(s){
+  return "I want you to build a Claude skill called \""+s.name+"\".\n\nWhat it should do: "+(s.does||"")+(s.area?"\nArea of my work: "+areaName(s.area):"")+"\n\nI am sharing:\n"+skPrep(s).map(function(x){return"- "+x.t}).join("\n")+"\n\nPlease:\n1. Ask me any questions you need before you start.\n2. Write the skill as a SKILL.md file: a clear name, a description of when Claude should use it, step-by-step instructions, rules to always follow, and an example of good output.\n3. Keep it specific to how I work, using what I shared.\n4. When it is ready, tell me how to add it to my Claude account and give me one real task to test it on.";
+}
+function skCard(s,rank){
+  var h='<div class="card skcard"><div class="spread"><b style="overflow-wrap:anywhere">'+(rank?'<span class="pill">#'+rank+'</span> ':"")+esc(s.name)+'</b><select aria-label="Status of '+esc(s.name)+'" data-sstatus="'+s.id+'">'+["needed","building","have"].map(function(x){return'<option'+(s.status===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div><p class="small">'+esc(s.does||"")+'</p>';
+  if(s.status==="needed"){
+    h+=(s.gap?'<p class="small muted"><b>To build it:</b> '+esc(s.gap)+'</p>':"")+'<div><button class="btn" data-act="sk-start" data-id="'+s.id+'">Start building</button></div>';
+  }else if(s.status==="building"){
+    var pr=skPrep(s),pdn=pr.filter(function(x){return x.done}).length,ts=s.tests||[false,false],ready=!!(s.built&&ts[0]&&ts[1]);
+    h+='<div class="skstep"><div class="lvl">1 · Gather what it needs · '+pdn+' of '+pr.length+'</div><ul class="check">'+pr.map(function(x,i){return'<li><input type="checkbox"'+(x.done?" checked":"")+' data-act="sk-prep" data-id="'+s.id+'" data-i="'+i+'" aria-label="Gathered: '+esc(x.t)+'"><span class="t'+(x.done?" done":"")+'">'+esc(x.t)+'</span></li>'}).join("")+'</ul></div>';
+    h+='<div class="skstep"><div class="lvl">2 · Ask Claude to build it</div><p class="small muted">Open a Claude chat, paste this prompt and attach what you gathered.</p><div class="row" style="gap:6px"><button class="btn" data-act="sk-copy" data-id="'+s.id+'">Copy prompt for Claude</button><button class="btn ghost" data-act="sk-show" data-id="'+s.id+'">'+(ui.skShow===s.id?"Hide prompt":"Show prompt")+'</button></div>'+(ui.skShow===s.id?'<textarea readonly rows="10" class="skprompt" aria-label="Prompt for Claude">'+esc(skPrompt(s))+'</textarea>':"")+'<ul class="check"><li><input type="checkbox"'+(s.built?" checked":"")+' data-act="sk-built" data-id="'+s.id+'" aria-label="Claude has written it and I added it to Claude"><span class="t'+(s.built?" done":"")+'">Claude has written it and I added it to Claude</span></li></ul></div>';
+    h+='<div class="skstep"><div class="lvl">3 · Test it</div><ul class="check">'+["Tried it on a real job","The result matched how I work"].map(function(t,i){return'<li><input type="checkbox"'+(ts[i]?" checked":"")+' data-act="sk-test" data-id="'+s.id+'" data-i="'+i+'" aria-label="'+t+'"><span class="t'+(ts[i]?" done":"")+'">'+t+'</span></li>'}).join("")+'</ul></div>';
+    h+='<div class="skstep"><button class="btn'+(ready?" primary":"")+'" data-act="sk-have" data-id="'+s.id+'" style="align-self:flex-start">Mark as have</button>'+(ready?"":'<span class="small muted">Tick the steps first, or mark it now if it already works.</span>')+'</div>';
+  }else{
+    h+=s.haveAt?'<p class="small muted">Working since '+esc(fmt(s.haveAt,{month:"short",day:"numeric",year:"numeric"}))+'</p>':"";
+  }
+  return h+'<div class="spread"><span class="small muted">'+esc(s.area?areaName(s.area):"")+'</span><button class="btn ghost" data-act="del" data-coll="skills" data-id="'+s.id+'">'+(ui.confirm==="skills/"+s.id?"Confirm":"Remove")+'</button></div></div>';
+}
+function skRankHtml(sk){
+  if(!ask)return"";
+  var rk=pdoc("skrank"),busy=!!(ui.skr&&ui.skr.loading),open=sk.filter(function(s){return s.status!=="have"}),top=(rk.order||[]).filter(function(o){return S.skills[o.id]&&S.skills[o.id].status!=="have"}).slice(0,3);
+  var h='<div class="card"><div class="spread" style="align-items:center"><div><h2>What to build first</h2><p class="small muted">Claude ranks the skills you still need against your active goals.</p></div><button class="btn'+(rk.order?"":" primary")+'" data-act="sk-rank"'+(busy||!open.length?" disabled":"")+'>'+(busy?"Thinking…":(rk.order?"Rank again":"What should I build first?"))+'</button></div>';
+  if(ui.skr&&ui.skr.error)h+='<p class="banner">'+esc(ui.skr.error)+'</p>';
+  if(top.length)h+='<div class="grid g3 fill">'+top.map(function(o,i){var s=S.skills[o.id];return'<div class="mini"><b style="overflow-wrap:anywhere"><span class="pill">#'+(i+1)+'</span> '+esc(s.name)+'</b><span class="small">'+esc(o.why||"")+'</span>'+(s.status==="needed"?'<button class="btn primary" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="sk-start" data-id="'+s.id+'">Start building</button>':'<span class="pill" style="align-self:flex-start">In progress</span>')+'</div>'}).join("")+'</div><p class="small muted">Ranked '+esc(fmt(rk.at,{month:"short",day:"numeric"}))+'.</p>';
+  return h+'</div>';
+}
+function skRank(){
+  if(!ask||(ui.skr&&ui.skr.loading))return;
+  var open=list("skills").filter(function(s){return s.status!=="have"});if(!open.length)return;
+  ui.skr={loading:true};render();
+  var gs=list("goals").filter(function(g){return g.status==="active"}).map(function(g){return{goal:g.title,area:areaName(g.area)}});
+  var p="Help someone decide which Claude skill to build first. A skill is a saved set of instructions Claude follows for a recurring job. Rank the skills below by how much each would help their active goals and day-to-day work now, putting foundation skills that other skills depend on (such as brand voice, brand design or business facts) early when that is true. Data as JSON:\n"+JSON.stringify({activeGoals:gs,skillsNotBuiltYet:open.map(function(s){return{id:s.id,name:s.name,does:s.does||"",area:s.area?areaName(s.area):"",needs:s.gap||"",status:s.status}}),skillsTheyHave:list("skills").filter(function(s){return s.status==="have"}).map(function(s){return s.name})})+"\n\nReturn ONLY a JSON object, no other text: {\"order\":[{\"id\":\"the skill id exactly as given\",\"why\":\"one plain sentence naming the goal or work it helps\"}]}. Include up to 5 skills, best first. No markdown.";
+  ask(p,{cache:false}).then(function(r){
+    var m=(r&&r.text||"").match(/\{[\s\S]*\}/),o=null;try{o=m&&JSON.parse(m[0])}catch(e){}
+    var ord=o&&Array.isArray(o.order)?o.order.filter(function(x){return x&&S.skills[x.id]}).slice(0,5).map(function(x){return{id:x.id,why:String(x.why||"").slice(0,300)}}):[];
+    if(!ord.length){ui.skr={error:"Claude sent an answer that could not be read. Try again."};render();return}
+    savePlan("skrank",function(x){x.order=ord;x.at=today()}).then(function(){ui.skr=null;render()});
+  },function(e){ui.skr={error:failMsg(e)};render()});
+}
 var RSTAT=[["added","Added"],["summarised","Claude knows how to use it"],["skill","Turned into a skill"]];
 function vLearn(){
   var rs=list("resources"),by={};
@@ -1681,7 +1738,7 @@ view.addEventListener("submit",function(ev){
   else if(k==="sub"){var i2=document.getElementById("sub-"+id),v=i2.value.trim();if(!v)return;S.tax=clone(S.tax);S.tax.groups.forEach(function(g){g.areas.forEach(function(a){if(a.id===id)(a.subs=a.subs||[]).push(v)})});i2.value="";saveTax();render()}
   else if(k==="area"){var i3=document.getElementById("area-"+id),v3=i3.value.trim();if(!v3)return;S.tax=clone(S.tax);S.tax.groups.forEach(function(g){if(g.id===id)(g.areas=g.areas||[]).push({id:slug(v3)+"-"+newId().slice(-3),name:v3,subs:[]})});i3.value="";saveTax();render()}
   else if(k==="group"){var v4=val("group-new");if(!v4)return;S.tax=S.tax?clone(S.tax):{groups:[]};S.tax.groups.push({id:slug(v4)+"-"+newId().slice(-3),name:v4,areas:[]});document.getElementById("group-new").value="";ui.editTax=true;saveTax();render()}
-  else if(k==="skill"){var n=val("sk-name");if(!n)return;write("skills",slug(n)+"-"+newId().slice(-3),{name:n,does:val("sk-does"),area:val("sk-area"),status:val("sk-status")||"needed",gap:""});["sk-name","sk-does"].forEach(function(i){document.getElementById(i).value=""})}
+  else if(k==="skill"){var n=val("sk-name");if(!n)return;write("skills",slug(n)+"-"+newId().slice(-3),{name:n,does:val("sk-does"),area:val("sk-area"),status:val("sk-status")||"needed",gap:val("sk-gap")});["sk-name","sk-does","sk-gap"].forEach(function(i){document.getElementById(i).value=""})}
   else if(k==="improve"){var x=val("im-text");if(!x)return;write("improve",newId(),{text:x,who:val("im-who")||"claude",status:"open",created:today()});document.getElementById("im-text").value=""}
   else if(k==="workout"){var wn=val("wo-name");if(!wn)return;write("workouts",newId(),{date:val("wo-date")||today(),name:wn,notes:"",ex:[],done:true});document.getElementById("wo-name").value=""}
   else if(k==="routine"){var rn=val("rt-name");if(!rn)return;var nrid=newId();ui.rt[nrid]=true;write("routines",nrid,{name:rn,ex:[]});document.getElementById("rt-name").value=""}
@@ -1763,8 +1820,9 @@ if(e.hasAttribute("data-plan")){var ppk=e.getAttribute("data-plan"),ppf=e.getAtt
     else if(was==="paid"&&e.value!=="paid"){if(ix.incomeId&&S.money[ix.incomeId])remove("money",ix.incomeId);ix.incomeId="";ix.paidOn=""}
     write("invoices",iid,ix);return}
   if(e.hasAttribute("data-rstatus")){var rid=e.getAttribute("data-rstatus"),rr=clone(S.resources[rid]);rr.status=e.value;write("resources",rid,rr);return}
-  if(e.hasAttribute("data-sstatus")){var sid=e.getAttribute("data-sstatus"),s=clone(S.skills[sid]);s.status=e.value;write("skills",sid,s);return}
+  if(e.hasAttribute("data-sstatus")){var sid=e.getAttribute("data-sstatus"),s=clone(S.skills[sid]);s.status=e.value;if(e.value==="have"&&!s.haveAt)s.haveAt=today();if(e.value==="building"&&!s.prep)s.prep=skPrep(s);savedNote(write("skills",sid,s));return}
   var a=e.getAttribute("data-act"),did=e.getAttribute("data-id");
+  if(a==="sk-prep"||a==="sk-built"||a==="sk-test"){var sk2=S.skills[e.getAttribute("data-id")]&&clone(S.skills[e.getAttribute("data-id")]);if(!sk2)return;var ski=+e.getAttribute("data-i");if(a==="sk-prep"){sk2.prep=skPrep(sk2);if(sk2.prep[ski])sk2.prep[ski].done=e.checked}else if(a==="sk-built")sk2.built=e.checked;else{sk2.tests=sk2.tests||[false,false];sk2.tests[ski]=e.checked}savedNote(write("skills",sk2.id||e.getAttribute("data-id"),sk2));return}
   if(a==="ls-done"){var lc2=S.courses[did]&&clone(S.courses[did]),li2=+e.getAttribute("data-i");if(lc2&&lc2.lessons&&lc2.lessons[li2]){lc2.lessons[li2].done=e.checked;savedNote(write("courses",did,lc2))}}
 if(a==="g-check"){var gg=goal(did),key=e.getAttribute("data-list"),i=+e.getAttribute("data-i");if(!gg||!gg[key][i])return;gg[key][i].done=e.checked;saveGoal(did,gg)}
   else if(a==="sb-act"){var sx=clone(S.subs[did]);sx.active=e.checked;write("subs",did,sx)}
@@ -1828,6 +1886,11 @@ if(a==="j-track"){var jtd=b.getAttribute("data-d"),jti=+b.getAttribute("data-i")
 if(a==="pat-run"){patAsk(+(ui.patN||28));return}
 if(a==="pat-track"){var prp=(pdoc("jpat").reports||[])[+b.getAttribute("data-r")],ptr=prp&&prp.track&&prp.track[+b.getAttribute("data-i")];if(!ptr)return;write("habits",newId(),{name:ptr.name,per:ptr.per||7,created:today(),days:{}}).then(function(ok){if(ok)flash("Added to your habits.")});return}
 if(a==="pat-q"){var pqr=(pdoc("jpat").reports||[])[+b.getAttribute("data-r")];if(!pqr||!pqr.question)return;ui.jday=today();render();window.scrollTo(0,0);var pta=document.querySelector("#view textarea.jdtext");if(pta){pta.value=(pta.value.trim()?pta.value.replace(/\s*$/,"")+"\n\n":"")+pqr.question+"\n";pta.focus();try{pta.setSelectionRange(pta.value.length,pta.value.length)}catch(x){}}return}
+if(a==="sk-start"){var ss=S.skills[id]&&clone(S.skills[id]);if(!ss)return;ss.status="building";ss.prep=skPrep(ss);ss.startedAt=today();write("skills",id,ss).then(function(ok){if(ok)flash("Moved to Building. Start by gathering what it needs.")});return}
+if(a==="sk-have"){var sh=S.skills[id]&&clone(S.skills[id]);if(!sh)return;sh.status="have";sh.haveAt=today();write("skills",id,sh).then(function(ok){if(ok)flash("Marked as have.")});return}
+if(a==="sk-show"){ui.skShow=ui.skShow===id?null:id;render();return}
+if(a==="sk-copy"){var sc=S.skills[id];if(!sc)return;var spt=skPrompt(sc),sfb=function(){ui.skShow=id;render();flash("Copy the prompt from the box below.")};try{navigator.clipboard.writeText(spt).then(function(){flash("Prompt copied. Paste it into a Claude chat and attach what you gathered.")},sfb)}catch(x){sfb()}return}
+if(a==="sk-rank"){skRank();return}
 if(a==="j-close"){ui.jday=null;render();window.scrollTo(0,0);return}
 if(a==="co-open"){ui.course=id;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
 if(a==="co-ai"){var qk=b.getAttribute("data-k");if(COAI[qk])coAsk(id,COAI[qk][0],COAI[qk][1]);return}

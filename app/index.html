@@ -552,24 +552,62 @@ ul.check.modlist li{align-items:center}
 .cnadd:hover{border-color:var(--ink);color:var(--ink)}
 .cnadd.slim{height:48px}
 .modlist input[type=checkbox]{margin-top:0}
+/* Library resource path */
+.rpath{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 4px}
+.rstep{font-size:.78rem;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.rstep.ok{color:var(--ink);border-color:var(--ink)}
+.rarrow{color:var(--muted);font-size:.8rem}
+/* Navigation groups (sidebar only) */
+.navlbl{font-family:var(--display);font-weight:800;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);opacity:.75;padding:16px 2px 4px}
+.brand + .navlbl{padding-top:10px}
+@media (max-width:760px){.navlbl{display:none}}
+/* Next step guides */
+.guide{gap:10px}
+.gsteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.gsteps li{display:flex;gap:10px;align-items:flex-start;color:var(--muted)}
+.gsteps li b{color:var(--ink);font-weight:600}
+.gsteps li.ok b{color:var(--muted);text-decoration:line-through}
+.gsteps li.now b{font-weight:800}
+.gnum{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:700;border:1px solid var(--line);color:var(--muted)}
+.gsteps li.now .gnum{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.gsteps li.ok .gnum{border-color:var(--ink);color:var(--ink)}
+.gnext{margin-top:4px}
+/* Goal health flags */
+.gflags{display:flex;flex-wrap:wrap;gap:6px}
+.gflag{font:inherit;font-size:.78rem;font-weight:600;color:var(--ink);background:transparent;border:1px dashed var(--muted);border-radius:999px;padding:3px 10px;cursor:pointer}
+.gflag:hover{border-style:solid;border-color:var(--ink)}
+/* Explore focus areas */
+.arearow{gap:8px;align-items:center}
+.arearow .btn{padding:4px 12px;font-size:.8rem}
+h2.exall{margin:0}
+/* Weekly rhythm */
+.rhy{min-height:150px}
+.rhy.ok b{color:var(--muted)}
+/* Sidebar fits a laptop screen with the group labels */
+@media (min-width:761px){nav{overflow-y:auto}nav a{padding-top:8px;padding-bottom:8px}.navlbl{padding-top:10px}}
 </style>
 </head>
 <body>
 <div class="shell">
   <nav aria-label="Views">
     <div class="brand">Life Hub</div>
+    <div class="navlbl">Daily</div>
     <a class="m" href="#today">Today</a>
     <a class="m" href="#plan">Planner</a>
+    <a href="#log">Journal</a>
+    <div class="navlbl">Direction</div>
     <a href="#areas">Explore</a>
     <a class="m" href="#goals">Goals</a>
+    <div class="navlbl">Areas</div>
     <a class="m" href="#fit">Fitness</a>
     <a href="#study">Learning</a>
     <a href="#biz">Business</a>
     <a class="m" href="#social">Social</a>
     <a href="#money">Money</a>
-    <a href="#log">Journal</a>
+    <div class="navlbl">Claude</div>
     <a href="#claude">Claude</a>
     <a href="#learn">Library</a>
+    <div class="navlbl">Hub</div>
     <a href="#find">Search</a>
     <a href="#data">Backup</a>
     <button type="button" id="more" class="morebtn" aria-expanded="false" aria-controls="sheet">More</button>
@@ -1154,6 +1192,7 @@ function vToday(){
   var hs=list("habits").sort(function(a,b){return a.name.localeCompare(b.name)}),hsd=hs.filter(function(x){return hper(x)===7}),hd=hsd.filter(function(x){return(x.days||{})[dayStr(0)]}).length,wr=hs.length?Math.round(100*hs.reduce(function(a,x){return a+Math.min(1,hweek(x)/hper(x))},0)/hs.length):null;
   var h='<div class="head"><h1>Today</h1><p class="muted">'+esc(new Date().toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"}))+'</p></div>';
   h+='<div class="grid g4"><div class="tile"><b>'+act.length+'</b><span>active goals</span></div><div class="tile"><b>'+avg+'%</b><span>average progress</span></div><div class="tile"><b>'+(hsd.length?hd+'/'+hsd.length:"–")+'</b><span>daily habits done today</span></div><div class="tile"><b>'+(wr==null?"–":wr+"%")+'</b><span>of weekly habit targets met</span></div></div>';
+  h+=rhythmHtml();
   h+=vh("Schedule");
   h+='<div class="grid g2"><div class="card">'+calHtml()+'</div><div class="card">'+agendaHtml()+'</div></div>';
   h+=vh("Habits");
@@ -1177,7 +1216,8 @@ function vToday(){
   h+='</div>';
   h+=vh("Review");
   if(ask){
-    h+='<div class="card"><div class="spread"><div class="head"><h2>Mentor review</h2><p class="muted small">Claude reads your goals, results, habits and journal, judges whether your actions are producing results, and plans your next week.</p></div><button class="btn primary" data-act="review"'+(ui.review&&ui.review.loading?" disabled":"")+'>'+(ui.review&&ui.review.loading?"Thinking…":"Run mentor review")+'</button></div>';
+    if(!ui.review){var prv=pdoc("review");if(prv.at)ui.review={data:prv.data||null,text:prv.text||"",done:true,at:prv.at}}
+    h+='<div class="card" id="rv-card" style="scroll-margin-top:70px"><div class="spread"><div class="head"><h2>Mentor review</h2><p class="muted small">Claude reads your goals, results, habits, journal and latest patterns, judges whether your actions are producing results, and plans your next week.'+(ui.review&&ui.review.at?' Last run '+esc(fmt(ui.review.at,{weekday:"short",month:"short",day:"numeric"}))+'.':"")+'</p></div><button class="btn primary" data-act="review"'+(ui.review&&ui.review.loading?" disabled":"")+'>'+(ui.review&&ui.review.loading?"Thinking…":"Run mentor review")+'</button></div>';
     if(ui.review&&ui.review.data){var rd=ui.review.data;
       h+='<div class="ai"><b>Assessment</b>\n'+esc(rd.assessment)+'\n\n<b>Working</b>\n'+esc(rd.working||"")+'\n\n<b>Not working</b>\n'+esc(rd.notWorking||"")+'\n\n<b>Change this</b>\n'+esc(rd.change||"")+'\n\n<b>Claude needs</b>\n'+esc(rd.claudeNeeds||"")+'</div>';
       if((rd.tasks||[]).length){h+='<div class="spread" style="align-items:center"><h3>Next week</h3><div class="row"><label class="small muted" for="rv-date">Add on</label><input type="date" id="rv-date" class="keep" value="'+addDays(today(),1)+'" style="padding:5px 8px;font-size:.84rem"></div></div>';rd.tasks.forEach(function(t,i){h+='<div class="task"><div class="tx">'+esc(t.text)+(t.why?'<div class="small muted">'+esc(t.why)+'</div>':"")+'</div>'+(t.added?'<span class="pill done">Added</span>':'<button class="btn" style="padding:4px 12px;font-size:.8rem" data-act="rv-add" data-i="'+i+'">Add to Planner</button>')+'</div>'})}
@@ -1198,7 +1238,10 @@ function vGoals(){
   gs.sort(function(a,b){return(order[a.status]-order[b.status])||a.title.localeCompare(b.title)});
   var h='<div class="head"><h1>Goals</h1><p class="muted">Each goal has milestones to reach and steps to take. Progress is the share you have ticked off.</p></div>';
   h+='<div class="card"><h2>Add a goal</h2><form class="add" data-form="goal"><div class="f" style="flex:2 1 260px"><label for="ng-title">Goal</label><input type="text" id="ng-title" class="keep" placeholder="What do you want to achieve?"></div><div class="f"><label for="ng-area">Area</label><select id="ng-area" class="keep" data-rerender>'+areaOptions(val("ng-area"))+'</select></div><div class="f"><label for="ng-sub">Sub-category</label><select id="ng-sub" class="keep">'+subOptions(val("ng-area"),val("ng-sub"))+'</select></div><div class="f"><label for="ng-target">Target</label><input type="text" id="ng-target" class="keep" placeholder="A number or result"></div><div class="f"><label for="ng-due">By when</label><input type="date" id="ng-due" class="keep"></div><button class="btn primary" type="submit">Add goal</button></form></div>';
+  h+=goalsGuide();
+  var nact=list("goals").filter(function(g){return g.status==="active"}).length;
   h+=vh("Your goals",list("goals").length+" in total");
+  if(nact>5)h+='<p class="banner" style="color:var(--ink);border-color:var(--line)">You have '+nact+' active goals. Progress is usually faster with 3 to 5. Consider setting a few to paused until the others are done.</p>';
   h+='<div class="row"><div class="f" style="flex:0 1 240px"><label for="f-area">Show area</label><select id="f-area" data-filter="fArea"><option value="">All areas</option>'+areaOptions(ui.fArea).replace('<option value="">Choose an area</option>','')+'</select></div><div class="f" style="flex:0 1 160px"><label for="f-status">Status</label><select id="f-status" data-filter="fStatus">'+["","active","draft","paused","done"].map(function(s){return'<option value="'+s+'"'+(ui.fStatus===s?" selected":"")+'>'+(s?s[0].toUpperCase()+s.slice(1):"All")+'</option>'}).join("")+'</select></div></div>';
   if(ui.fArea||ui.fStatus)h+='<div class="row"><span class="small muted">Showing '+gs.length+' goal'+(gs.length===1?"":"s")+(ui.fArea?" in "+esc(areaName(ui.fArea)):"")+(ui.fStatus?" with status "+esc(ui.fStatus):"")+'.</span><button class="btn" data-act="f-clear">Show all goals</button></div>';
   if(!gs.length)h+='<div class="empty">No goals here yet. Pick some from Explore or add one above.</div>';
@@ -1211,15 +1254,52 @@ function checklist(g,key,label,ph){
   h+='</ul><form class="add" data-form="item" data-id="'+g.id+'" data-list="'+key+'" style="margin-top:8px"><input type="text" class="keep" id="add-'+key+'-'+g.id+'" placeholder="'+ph+'" style="flex:1 1 200px" aria-label="'+ph+'"><button class="btn" type="submit">Add</button></form></div>';
   return h;
 }
+/* ---------- Next step guides ---------- */
+function gCollapsed(k){try{return localStorage.getItem("lh-guide-"+k)==="1"}catch(e){return false}}
+function guideHtml(k,title,steps,doneMsg){
+  var dn=steps.filter(function(s){return s.done}).length,nx=steps.filter(function(s){return !s.done})[0],col=gCollapsed(k);
+  var h='<div class="card guide"><div class="spread" style="align-items:center"><div><h2>'+title+'</h2><span class="small muted">'+(nx?dn+" of "+steps.length+" steps done":"All steps done")+'</span></div><button class="btn ghost" data-act="g-tog" data-k="'+k+'" aria-expanded="'+!col+'">'+(col?"Show steps":"Hide steps")+'</button></div>';
+  if(!col)h+='<ol class="gsteps">'+steps.map(function(s,i){return'<li class="'+(s.done?"ok":(s===nx?"now":""))+'"><span class="gnum" aria-hidden="true">'+(s.done?"✓":String(i+1))+'</span><div><b>'+s.t+'</b><div class="small muted">'+s.d+'</div></div></li>'}).join("")+'</ol>';
+  h+=nx?(nx.btn?'<div class="gnext"><button class="btn primary" '+nx.btn+'>Do this next: '+nx.label+'</button></div>':""):'<p class="small muted">'+(doneMsg||"You have the whole flow set up.")+'</p>';
+  return h+'</div>';
+}
+function shortT(g){var t=g?String(g.title||g.name||""):"";return t.length>34?t.slice(0,32)+"…":t}
+function goalSched(id){var t=today();return list("tasks").filter(function(x){return x.goal===id&&!x.done&&x.date>=t}).sort(byWhen)[0]||null}
+function recentPoint(g){var p=g.points||[],l=p[p.length-1];return !!(l&&l.d>=addDays(today(),-14))}
+function goalFlags(g){
+  if(g.status!=="active")return[];
+  var f=[];
+  if(!g.target)f.push(["Needs a target","gg-"]);
+  if(!g.due)f.push(["Needs a date","gd-"]);
+  if(!(g.steps||[]).length)f.push(["No steps yet","add-steps-"]);
+  else if(nextStep(g)&&!goalSched(g.id))f.push(["Next step not scheduled","sch-"]);
+  if(g.target&&!recentPoint(g))f.push(["No result logged in 2 weeks","gp-"]);
+  return f;
+}
+function goFix(id,pre){return'data-act="gf" data-h="#goals" data-open="'+id+'" data-focus="'+pre+id+'"'}
+function goalsGuide(){
+  var act=list("goals").filter(function(g){return g.status==="active"}).sort(function(a,b){return a.title.localeCompare(b.title)}),first=function(f){return act.filter(f)[0]||null};
+  var noT=first(function(g){return !g.target||!g.due}),noS=first(function(g){return !(g.steps||[]).length}),noSch=first(function(g){return nextStep(g)&&!goalSched(g.id)}),noR=first(function(g){return g.target&&!recentPoint(g)});
+  return guideHtml("goals","How to work your goals",[
+    {t:"Choose a goal",d:act.length?act.length+" active goal"+(act.length===1?"":"s")+".":"Pick one from the ideas in Explore, or add your own below.",done:act.length>0,btn:'data-act="gf" data-h="#areas"',label:"pick a goal in Explore"},
+    {t:"Give it a target and a date",d:"A number or result, and when you want it by."+(noT?" "+esc(shortT(noT))+" still needs one.":""),done:act.length>0&&!noT,btn:noT?goFix(noT.id,noT.target?"gd-":"gg-"):"",label:"finish "+esc(shortT(noT))},
+    {t:"Break it into steps",d:"Small actions you can tick off."+(noS?" "+esc(shortT(noS))+" has none yet.":""),done:act.length>0&&!noS,btn:noS?goFix(noS.id,"add-steps-"):"",label:"add steps to "+esc(shortT(noS))},
+    {t:"Schedule the next step",d:"Put it on a day so it shows on Today and in your planner."+(noSch?" "+esc(shortT(noSch))+" is not scheduled.":""),done:act.length>0&&!noS&&!noSch,btn:noSch?goFix(noSch.id,"sch-"):"",label:"schedule "+esc(shortT(noSch))},
+    {t:"Log your result each week",d:"Record your number so you can see whether the work is paying off."+(noR?" "+esc(shortT(noR))+" has no result in two weeks.":""),done:act.length>0&&!noR&&act.some(function(g){return g.target}),btn:noR?goFix(noR.id,"gp-"):"",label:"log a result for "+esc(shortT(noR))}
+  ],"Every active goal has a target, steps, a scheduled next step and a recent result. Keep logging each week.");
+}
 function goalCard(g){
   var p=pct(g),open=ui.open===g.id,pl=ui.plan[g.id];
   var h='<div class="card goal" id="goal-'+g.id+'"><div class="spread"><div><button class="title" data-act="g-open" data-id="'+g.id+'" aria-expanded="'+open+'">'+esc(g.title)+'</button><div class="small muted">'+esc(areaName(g.area))+(g.sub?" · "+esc(g.sub):"")+(g.due?" · by "+esc(g.due):"")+'</div></div><span class="pill '+esc(g.status)+'">'+esc(g.status)+'</span></div><div class="row"><div class="bar" style="flex:1" role="progressbar" aria-valuenow="'+p+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+p+'%"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+p+'%</span></div>';
+  var gfl=goalFlags(g);if(gfl.length)h+='<div class="gflags">'+gfl.map(function(x){return'<button class="gflag" '+goFix(g.id,x[1])+'>'+x[0]+'</button>'}).join("")+'</div>';
   if(open){
     h+='<div class="detail"><div class="row"><div class="f" style="flex:2 1 240px"><label for="gt-'+g.id+'">Goal</label><input type="text" id="gt-'+g.id+'" data-gfield="title" data-id="'+g.id+'" value="'+esc(g.title)+'"></div><div class="f"><label for="gs-'+g.id+'">Status</label><select id="gs-'+g.id+'" data-gfield="status" data-id="'+g.id+'">'+["draft","active","paused","done"].map(function(s){return'<option'+(g.status===s?" selected":"")+'>'+s+'</option>'}).join("")+'</select></div><div class="f"><label for="gg-'+g.id+'">Target</label><input type="text" id="gg-'+g.id+'" data-gfield="target" data-id="'+g.id+'" value="'+esc(g.target||"")+'" placeholder="A number or result"></div><div class="f"><label for="gd-'+g.id+'">By when</label><input type="date" id="gd-'+g.id+'" data-gfield="due" data-id="'+g.id+'" value="'+esc(g.due||"")+'"></div></div>';
     h+='<div class="f"><label for="gw-'+g.id+'">Why it matters</label><textarea id="gw-'+g.id+'" data-gfield="why" data-id="'+g.id+'" placeholder="What changes when this is done?">'+esc(g.why||"")+'</textarea></div>';
     var pts=g.points||[],lastp=pts.length?pts[pts.length-1]:null;
     h+='<div class="card inset"><div class="head"><h3>Result number</h3><p class="small muted">The one number that shows this goal is working. Record it regularly so actions can be compared with results.</p></div><div class="row"><div class="f"><label for="gm-'+g.id+'">What you measure</label><input type="text" id="gm-'+g.id+'" data-gfield="metric" data-id="'+g.id+'" value="'+esc(g.metric||"")+'" placeholder="for example followers, revenue, sessions per week"></div><form class="add" data-form="point" data-id="'+g.id+'" style="flex:1 1 200px"><div class="f"><label for="gp-'+g.id+'">Value today</label><input type="text" inputmode="decimal" id="gp-'+g.id+'" class="keep" placeholder="number"></div><button class="btn" type="submit">Record</button></form></div>'+(lastp?'<p class="small">Latest: <b>'+esc(lastp.v)+'</b> on '+esc(lastp.d)+(pts.length>1?' · started at '+esc(pts[0].v)+' on '+esc(pts[0].d):'')+'</p>':'')+spark(pts)+'</div>';
     h+='<div class="grid g2">'+checklist(g,"milestones","Milestones","Add a milestone")+checklist(g,"steps","Steps","Add a step")+'</div>';
+    var nst=nextStep(g),sch=goalSched(g.id);
+    h+='<div class="card inset"><div class="head"><h3>Next step</h3><p class="small muted">'+(nst?"Put it on a day so it shows on Today and in your planner.":"Add a step above first.")+'</p></div>'+(nst?'<p><b>'+esc(nst.t)+'</b></p>'+(sch?'<p class="small">On your calendar '+esc(fmt(sch.date,{weekday:"long",month:"short",day:"numeric"}))+(sch.time?" at "+esc(sch.time):"")+'.</p>':"")+'<form class="add" data-form="g-sched" data-id="'+g.id+'"><div class="f" style="flex:0 1 170px"><label for="sch-'+g.id+'">Day</label><input type="date" id="sch-'+g.id+'" value="'+today()+'"></div><div class="f" style="flex:0 1 130px"><label for="scht-'+g.id+'">Time (optional)</label><input type="time" id="scht-'+g.id+'"></div><button class="btn primary" type="submit">'+(sch?"Schedule it again":"Add to calendar")+'</button></form>':"")+'</div>';
     if(ask){
       h+='<div class="note"><div class="spread"><div><h3>Plan this with Claude</h3><p class="small">Claude suggests milestones, next steps and any skill it would need to help. You choose what to keep.</p></div><button class="btn primary" data-act="g-plan" data-id="'+g.id+'"'+(pl&&pl.loading?" disabled":"")+'>'+(pl&&pl.loading?"Thinking…":"Suggest a plan")+'</button></div>';
       if(pl&&pl.error)h+='<p class="banner">'+esc(pl.error)+'</p>';
@@ -1299,19 +1379,71 @@ function pathHtml(a){
   return h;
 }
 
+/* ---------- Explore focus areas ---------- */
+function focusIds(){return(pdoc("focus").areas||[]).filter(function(id){return areaById(id)})}
+function nextLevel(a){var p=pathFor(a.id);if(!p||!(p.levels||[]).length)return null;var at=S.levels&&S.levels[a.id];if(typeof at==="number"&&at>=0)return p.levels[at+1]?{i:at+1,name:p.levels[at+1].name,set:true,at:at,of:p.levels.length}:{done:true,set:true};for(var i=0;i<p.levels.length;i++){var L=p.levels[i];if((L.goals||[]).some(function(g){return !hasGoal(g)}))return{i:i,name:L.name}}return{done:true}}
+function exploreGuide(){
+  var fi=focusIds(),gs=list("goals").filter(function(g){return g.status!=="done"}),noG=fi.filter(function(id){return !gs.some(function(g){return g.area===id})})[0],fg=gs.filter(function(g){return fi.indexOf(g.area)>=0&&g.status==="active"}),unset=fg.filter(function(g){return !g.target||!(g.steps||[]).length})[0];
+  return guideHtml("explore","How to use Explore",[
+    {t:"Choose up to 3 focus areas",d:fi.length?fi.map(function(id){return esc(areaName(id))}).join(", ")+".":"The parts of work and life you want to move forward now. Tap Make it a focus area on any area below.",done:fi.length>0,btn:'data-act="gf" data-h="#areas" data-focus="ex-all"',label:"choose a focus area"},
+    {t:"Add a goal in each focus area",d:"Open a sub-category for goal ideas, or open Levels and add goals from your next level."+(noG?" "+esc(areaName(noG))+" has no goal yet.":""),done:fi.length>0&&!noG,btn:noG?'data-act="gf" data-h="#areas" data-focus="area-'+esc(noG)+'"':"",label:"add a goal in "+esc(noG?areaName(noG):"")},
+    {t:"Set it up on the Goals page",d:"Give each one a target and steps, then schedule the next step."+(unset?" "+esc(shortT(unset))+" needs this.":""),done:fg.length>0&&!unset,btn:unset?goFix(unset.id,unset.target?"add-steps-":"gg-"):'data-act="gf" data-h="#goals"',label:unset?"set up "+esc(shortT(unset)):"open Goals"}
+  ],"Your focus areas each have a goal that is set up. Come back when you are ready for the next level.");
+}
+function areaCard(a,gs){
+  var n=gs.filter(function(x){return x.area===a.id&&x.status!=="done"}).length,isF=focusIds().indexOf(a.id)>=0,nl=nextLevel(a);
+  var h='<div class="card" id="area-'+esc(a.id)+'" style="scroll-margin-top:70px"><div class="spread"><h3>'+esc(a.name)+'</h3><button class="btn ghost" data-act="focus" data-id="'+esc(a.id)+'">'+n+' goal'+(n===1?"":"s")+' →</button></div>';
+  if(!ui.editTax)h+='<div class="row arearow"><button class="btn'+(isF?" on":"")+'" data-act="fa-tog" data-id="'+esc(a.id)+'" aria-pressed="'+isF+'">'+(isF?"Focus area ✓":"Make it a focus area")+'</button>'+(nl?'<span class="small muted">'+(nl.done?(nl.set?"Top level reached":"All levels added"):(nl.set?"Level "+(nl.at+1)+" of "+nl.of+" · next: "+esc(nl.name):"Suggested next level: "+(nl.i+1)+" · "+esc(nl.name)))+'</span>':"")+'</div>';
+  h+=leadLine(a)+(ui.editTax?'<div class="chips">'+(a.subs||[]).map(function(s,i){return'<span class="chip">'+esc(s)+'<button aria-label="Remove '+esc(s)+'" data-act="t-rmsub" data-id="'+esc(a.id)+'" data-i="'+i+'">×</button></span>'}).join("")+'</div>':subsHtml(a)+'<div class="morelbl">Go deeper</div>'+pathHtml(a)+briefHtml(a));
+  if(ui.editTax)h+='<form class="add" data-form="sub" data-id="'+esc(a.id)+'"><input type="text" class="keep" id="sub-'+esc(a.id)+'" placeholder="Add a sub-category" aria-label="Add a sub-category" style="flex:1 1 160px"><button class="btn" type="submit">Add</button></form><div><button class="btn danger" data-act="t-rmarea" data-id="'+esc(a.id)+'">'+(ui.confirm==="area/"+a.id?"Confirm remove":"Remove area")+'</button></div>';
+  return h+'</div>';
+}
+/* ---------- Weekly rhythm, Library and Claude guides ---------- */
+function lastDate(d){return d?fmt(d,{weekday:"short",month:"short",day:"numeric"}):"not yet"}
+function rhythmHtml(){
+  var td=today(),ws=wkStart(td),wk=pdoc("w-"+ws).top||[],je=S.journal[td],ci=!!((je&&String(je.text||"").trim())||pdoc("d-"+td).win),reps=pdoc("jpat").reports||[],lp=reps.length?reps[reps.length-1].at:"",rv=pdoc("review").at||"";
+  var items=[
+    {t:"Plan your week",w:"Mondays",ok:wk.length>0,last:wk.length?"This week has "+wk.length+" priorit"+(wk.length===1?"y":"ies"):"Not planned yet",btn:'data-act="pl-go" data-mode="week" data-d="'+ws+'"',l:"Plan the week"},
+    {t:"Daily check-in",w:"Every evening",ok:ci,last:ci?"Done today":"Not done today",btn:'data-act="j-open" data-d="'+td+'"',l:"Write today"},
+    {t:"Find my patterns",w:"Once a week",ok:!!lp&&lp>=addDays(td,-6),last:"Last run: "+lastDate(lp),btn:'data-act="gf" data-h="#log" data-focus="pat-n"',l:"Open patterns"},
+    {t:"Mentor review",w:"Fridays",ok:!!rv&&rv>=ws,last:"Last run: "+lastDate(rv),btn:ask?'data-act="gf" data-h="#today" data-focus="rv-card"':"",l:"Go to the review"}
+  ];
+  var dn=items.filter(function(x){return x.ok}).length;
+  var h=vh("Your weekly rhythm",dn+" of 4 done this week");
+  h+='<div class="grid g4">'+items.map(function(x){return'<div class="mini rhy'+(x.ok?" ok":"")+'"><b>'+(x.ok?"✓ ":"")+x.t+'</b><span class="small muted">'+x.w+'</span><span class="small">'+esc(x.last)+'</span>'+(x.btn?'<button class="btn'+(x.ok?"":" primary")+'" style="align-self:flex-start;padding:4px 12px;font-size:.8rem;margin-top:auto" '+x.btn+'>'+x.l+'</button>':"")+'</div>'}).join("")+'</div><p class="small muted">On Fridays, run Find my patterns first. The mentor review reads it.</p>';
+  return h;
+}
+function libraryGuide(){
+  var rs=list("resources").sort(function(a,b){return a.title.localeCompare(b.title)}),noUse=rs.filter(function(r){return !r.use&&(r.status||"added")==="added"})[0],toAdd=rs.filter(function(r){return r.skill&&r.skill.name&&!r.skillId&&!list("skills").some(function(x){return x.name===r.skill.name})})[0],linked=rs.filter(function(r){return r.skillId&&S.skills[r.skillId]}),built=linked.filter(function(r){return S.skills[r.skillId].status==="have"});
+  return guideHtml("library","How to use the Library",[
+    {t:"Add a resource",d:"A course, book, guide or your own document, with a note on why it matters.",done:rs.length>0,btn:'data-act="gf" data-h="#learn" data-focus="rs-title"',label:"add a resource"},
+    {t:"Ask Claude how to use it",d:"Claude suggests how it could help and which skill it could become."+(noUse?" "+esc(shortT(noUse))+" has not been asked yet.":""),done:rs.length>0&&!noUse,btn:noUse&&ask?'data-act="r-use" data-id="'+noUse.id+'"':"",label:"ask about "+esc(shortT(noUse))},
+    {t:"Add the suggested skill to the Claude page",d:"It goes into Skills needed, with what Claude needs from you."+(toAdd?" "+esc(toAdd.skill.name)+" is waiting.":""),done:rs.length>0&&!toAdd&&(linked.length>0||rs.every(function(r){return !r.skill})),btn:toAdd?'data-act="r-skill" data-id="'+toAdd.id+'"':"",label:"add "+esc(toAdd?toAdd.skill.name:"")},
+    {t:"Build it on the Claude page",d:"Follow the steps on its card there until it is marked as have.",done:built.length>0,btn:linked.length?'data-act="go-claude"':"",label:"open the Claude page"}
+  ],"A resource has become a working skill. Add the next one when you are ready.");
+}
+function claudeGuide(sk){
+  var rk=pdoc("skrank").order||[],byId={};sk.forEach(function(s){byId[s.id]=s});var top=rk.map(function(o){return byId[o.id]}).filter(function(s){return s&&s.status==="needed"})[0]||sk.filter(function(s){return s.status==="needed"})[0],bld=sk.filter(function(s){return s.status==="building"})[0];
+  return guideHtml("claude","How to build a skill",[
+    {t:"See which skill to build first",d:"Claude ranks the skills you still need against your goals.",done:rk.length>0,btn:ask?'data-act="sk-rank"':"",label:"rank my skills"},
+    {t:"Start building it",d:"Moves it to Building and turns what it needs into a checklist.",done:sk.some(function(s){return s.status==="building"||s.startedAt||s.haveAt}),btn:top?'data-act="sk-start" data-id="'+top.id+'"':"",label:"start "+esc(top?top.name:"")},
+    {t:"Build it with Claude",d:"Gather what it needs, copy the prompt into a Claude chat and attach your material.",done:sk.some(function(s){return s.built||s.haveAt}),btn:bld?'data-act="gf" data-h="#claude" data-focus="sk-'+bld.id+'"':"",label:"go to "+esc(bld?bld.name:"")},
+    {t:"Test it and mark it as have",d:"Try it on a real job. When it matches how you work, mark it as have.",done:sk.some(function(s){return s.haveAt}),btn:bld?'data-act="gf" data-h="#claude" data-focus="sk-'+bld.id+'"':"",label:"test "+esc(bld?bld.name:"")}
+  ],"You have built a skill with this flow. Pick the next one from Needed and repeat.");
+}
 function vAreas(){
   var gs=list("goals");
   var h='<div class="spread"><div class="head"><h1>Explore</h1><p class="muted">Every area of work and life, with goal ideas in each sub-category. Foundations are where most people start. The second list is what people at the top of that area also work on. Add any that fit, then plan them with Claude in Goals.</p></div><button class="btn tagbtn'+(ui.editTax?" on":"")+'" data-act="t-edit" aria-pressed="'+ui.editTax+'">'+(ui.editTax?"✓ Done editing":"✎ Edit categories")+'</button></div>';
   if(!S.tax||!(S.tax.groups||[]).length)h+='<div class="empty">No categories yet. Add your first group below.</div>';
   else h+='<div class="jump" aria-label="Jump to a group">'+S.tax.groups.map(function(g){return'<button class="btn" data-act="jump" data-id="'+esc(g.id)+'">'+esc(g.name)+'</button>'}).join("")+((ui.sub||ui.path)?'<button class="btn ghost" data-act="collapse">Collapse all</button>':"")+'</div>';
-  (S.tax&&S.tax.groups||[]).forEach(function(g){
+  var fids=focusIds(),hideRest=!ui.editTax&&fids.length>0&&(ui.exAll===false||(ui.exAll==null&&fids.length>=3));
+  if(S.tax&&(S.tax.groups||[]).length&&!ui.editTax){h+=exploreGuide();
+    if(fids.length){h+=vh("Your focus areas",fids.length+" of 3");h+='<div class="grid g2">'+fids.map(function(id){return areaCard(areaById(id),gs)}).join("")+'</div>'}
+    h+='<div class="spread" id="ex-all" style="scroll-margin-top:70px;align-items:center"><h2 class="exall">'+(fids.length?"All other areas":"All areas")+'</h2>'+(fids.length?'<button class="btn" data-act="ex-all">'+(hideRest?"Show all areas":"Hide other areas")+'</button>':"")+'</div>';}
+  if(!hideRest)(S.tax&&S.tax.groups||[]).forEach(function(g){
+    var gar=(g.areas||[]).filter(function(a){return ui.editTax||fids.indexOf(a.id)<0});if(!gar.length)return;
     h+='<div class="head" id="grp-'+esc(g.id)+'" style="scroll-margin-top:70px"><h2>'+esc(g.name)+'</h2></div><div class="grid g2">';
-    (g.areas||[]).forEach(function(a){
-      var n=gs.filter(function(x){return x.area===a.id&&x.status!=="done"}).length;
-      h+='<div class="card"><div class="spread"><h3>'+esc(a.name)+'</h3><button class="btn ghost" data-act="focus" data-id="'+esc(a.id)+'">'+n+' goal'+(n===1?"":"s")+' →</button></div>'+leadLine(a)+(ui.editTax?'<div class="chips">'+(a.subs||[]).map(function(s,i){return'<span class="chip">'+esc(s)+'<button aria-label="Remove '+esc(s)+'" data-act="t-rmsub" data-id="'+esc(a.id)+'" data-i="'+i+'">×</button></span>'}).join("")+'</div>':subsHtml(a)+'<div class="morelbl">Go deeper</div>'+pathHtml(a)+briefHtml(a));
-      if(ui.editTax)h+='<form class="add" data-form="sub" data-id="'+esc(a.id)+'"><input type="text" class="keep" id="sub-'+esc(a.id)+'" placeholder="Add a sub-category" aria-label="Add a sub-category" style="flex:1 1 160px"><button class="btn" type="submit">Add</button></form><div><button class="btn danger" data-act="t-rmarea" data-id="'+esc(a.id)+'">'+(ui.confirm==="area/"+a.id?"Confirm remove":"Remove area")+'</button></div>';
-      h+='</div>';
-    });
+    gar.forEach(function(a){h+=areaCard(a,gs)});
     h+='</div>';
     if(ui.editTax)h+='<form class="add" data-form="area" data-id="'+esc(g.id)+'"><input type="text" class="keep" id="area-'+esc(g.id)+'" placeholder="Add an area to '+esc(g.name)+'" aria-label="Add an area" style="flex:0 1 300px"><button class="btn" type="submit">Add area</button></form>';
   });
@@ -1323,6 +1455,7 @@ function vAreas(){
 function vClaude(){
   var sk=list("skills").sort(function(a,b){return a.name.localeCompare(b.name)});
   var h='<div class="head"><h1>Claude</h1><p class="muted">What Claude can already do for you, what it still needs, and what would make its results better.</p></div>';
+  h+=claudeGuide(sk);
   h+=vh("Working together");
   h+='<div class="note"><h3>How we work on this together</h3><p class="small">Claude helps from inside the hub. Use Run mentor review on Today, Suggest a plan on a goal, Capability brief on an area in Explore, Draft a skill in the Library, and Ask Claude inside each course in Learning. Each button sends Claude only what it needs from your hub and saves the answer here.</p><p class="small muted">A regular Claude chat cannot see your hub, because your data lives in your own private database. To get help there, copy in the part you want to talk about.</p></div>';
   h+='<div class="head"><h2>Skills</h2><p class="muted small">A skill is a saved set of instructions Claude follows every time it does a certain job, so it works your way without you explaining again.</p></div>';
@@ -1543,7 +1676,7 @@ function skPrompt(s){
   return "I want you to build a Claude skill called \""+s.name+"\".\n\nWhat it should do: "+(s.does||"")+(s.area?"\nArea of my work: "+areaName(s.area):"")+"\n\nI am sharing:\n"+skPrep(s).map(function(x){return"- "+x.t}).join("\n")+"\n\nPlease:\n1. Ask me any questions you need before you start.\n2. Write the skill as a SKILL.md file: a clear name, a description of when Claude should use it, step-by-step instructions, rules to always follow, and an example of good output.\n3. Keep it specific to how I work, using what I shared.\n4. When it is ready, tell me how to add it to my Claude account and give me one real task to test it on.";
 }
 function skCard(s,rank){
-  var h='<div class="card skcard"><div class="spread"><b style="overflow-wrap:anywhere">'+(rank?'<span class="pill">#'+rank+'</span> ':"")+esc(s.name)+'</b><select aria-label="Status of '+esc(s.name)+'" data-sstatus="'+s.id+'">'+["needed","building","have"].map(function(x){return'<option'+(s.status===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div><p class="small">'+esc(s.does||"")+'</p>';
+  var h='<div class="card skcard" id="sk-'+s.id+'" style="scroll-margin-top:70px"><div class="spread"><b style="overflow-wrap:anywhere">'+(rank?'<span class="pill">#'+rank+'</span> ':"")+esc(s.name)+'</b><select aria-label="Status of '+esc(s.name)+'" data-sstatus="'+s.id+'">'+["needed","building","have"].map(function(x){return'<option'+(s.status===x?" selected":"")+'>'+x+'</option>'}).join("")+'</select></div><p class="small">'+esc(s.does||"")+'</p>';
   if(s.status==="needed"){
     h+=(s.gap?'<p class="small muted"><b>To build it:</b> '+esc(s.gap)+'</p>':"")+'<div><button class="btn" data-act="sk-start" data-id="'+s.id+'">Start building</button></div>';
   }else if(s.status==="building"){
@@ -1562,7 +1695,7 @@ function skRankHtml(sk){
   var rk=pdoc("skrank"),busy=!!(ui.skr&&ui.skr.loading),open=sk.filter(function(s){return s.status!=="have"}),top=(rk.order||[]).filter(function(o){return S.skills[o.id]&&S.skills[o.id].status!=="have"}).slice(0,3);
   var h='<div class="card"><div class="spread" style="align-items:center"><div><h2>What to build first</h2><p class="small muted">Claude ranks the skills you still need against your active goals.</p></div><button class="btn'+(rk.order?"":" primary")+'" data-act="sk-rank"'+(busy||!open.length?" disabled":"")+'>'+(busy?"Thinking…":(rk.order?"Rank again":"What should I build first?"))+'</button></div>';
   if(ui.skr&&ui.skr.error)h+='<p class="banner">'+esc(ui.skr.error)+'</p>';
-  if(top.length)h+='<div class="grid g3 fill">'+top.map(function(o,i){var s=S.skills[o.id];return'<div class="mini"><b style="overflow-wrap:anywhere"><span class="pill">#'+(i+1)+'</span> '+esc(s.name)+'</b><span class="small">'+esc(o.why||"")+'</span>'+(s.status==="needed"?'<button class="btn primary" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="sk-start" data-id="'+s.id+'">Start building</button>':'<span class="pill" style="align-self:flex-start">In progress</span>')+'</div>'}).join("")+'</div><p class="small muted">Ranked '+esc(fmt(rk.at,{month:"short",day:"numeric"}))+'.</p>';
+  if(top.length)h+='<div class="grid g3 fill">'+top.map(function(o,i){var s=S.skills[o.id],sid=o.id;return'<div class="mini"><b style="overflow-wrap:anywhere"><span class="pill">#'+(i+1)+'</span> '+esc(s.name)+'</b><span class="small">'+esc(o.why||"")+'</span>'+(s.status==="needed"?'<button class="btn primary" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="sk-start" data-id="'+sid+'">Start building</button>':'<span class="pill" style="align-self:flex-start">In progress</span>')+'</div>'}).join("")+'</div><p class="small muted">Ranked '+esc(fmt(rk.at,{month:"short",day:"numeric"}))+'.</p>';
   return h+'</div>';
 }
 function skRank(){
@@ -1583,8 +1716,9 @@ function vLearn(){
   var rs=list("resources"),by={};
   rs.forEach(function(r){var k=r.area||"";(by[k]=by[k]||[]).push(r)});
   var h='<div class="head"><h1>Library</h1><p class="muted">Everything you and Claude can learn from: courses, books, guides, your own documents and files. Each resource shows how far Claude has got with it.</p></div>';
-  h+='<div class="note"><h3>How Claude uses a resource</h3><p class="small">Claude does not absorb a resource permanently. It becomes useful when it is turned into a skill Claude reads every time. "How should Claude use this?" gives a first plan from the title and your note. To have Claude read the file itself and build the skill, paste this hub\'s link into a chat and ask.</p></div>';
-  h+='<div class="card"><h2>Add a resource</h2><form class="add" data-form="res"><div class="f" style="flex:2 1 220px"><label for="rs-title">Title</label><input type="text" id="rs-title" class="keep"></div><div class="f" style="flex:2 1 220px"><label for="rs-url">Link (optional)</label><input type="url" id="rs-url" class="keep" placeholder="https://"></div><div class="f"><label for="rs-area">Area</label><select id="rs-area" class="keep">'+areaOptions(val("rs-area"))+'</select></div><div class="f" style="flex:0 1 150px"><label for="rs-kind">Type</label><select id="rs-kind" class="keep"><option>course</option><option>book</option><option>guide</option><option>my document</option><option>reference</option><option>tool</option></select></div><div class="f" style="flex:1 1 100%"><label for="rs-note">What it is and why it matters</label><input type="text" id="rs-note" class="keep" placeholder="for example: my brand style guide, the rules every design should follow"></div>'+(store?'<div class="f" style="flex:1 1 100%"><label for="rs-file">File (optional): PDF, image, text, CSV or Markdown, up to 20 MB</label><input type="file" id="rs-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,.csv,.json"></div>':'')+'<button class="btn primary" type="submit"'+(ui.upBusy?" disabled":"")+'>'+(ui.upBusy?"Uploading…":"Add resource")+'</button></form></div>';
+  h+=libraryGuide();
+  h+='<div class="note"><h3>How Claude uses a resource</h3><p class="small">Claude does not absorb a resource permanently. It becomes useful when it is turned into a skill Claude reads every time. Each resource below shows its three steps: added, Claude knows how to use it, and turned into a skill. The button under each one is its next step.</p><p class="small muted">To build a skill from the whole file, add it to the Claude page, then use Copy prompt for Claude there and attach the file in a Claude chat.</p></div>';
+  h+='<div class="card"><h2>Add a resource</h2><form class="add" data-form="res"><div class="f" style="flex:2 1 220px"><label for="rs-title">Title</label><input type="text" id="rs-title" class="keep"></div><div class="f" style="flex:2 1 220px"><label for="rs-url">Link (optional)</label><input type="text" inputmode="url" id="rs-url" class="keep" placeholder="for example academy.claude.com"></div><div class="f"><label for="rs-area">Area</label><select id="rs-area" class="keep">'+areaOptions(val("rs-area"))+'</select></div><div class="f" style="flex:0 1 150px"><label for="rs-kind">Type</label><select id="rs-kind" class="keep"><option>course</option><option>book</option><option>guide</option><option>my document</option><option>reference</option><option>tool</option></select></div><div class="f" style="flex:1 1 100%"><label for="rs-note">What it is and why it matters</label><input type="text" id="rs-note" class="keep" placeholder="for example: my brand style guide, the rules every design should follow"></div>'+(store?'<div class="f" style="flex:1 1 100%"><label for="rs-file">File (optional): PDF, image, text, CSV or Markdown, up to 20 MB</label><input type="file" id="rs-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md,.csv,.json"></div>':'')+'<button class="btn primary" type="submit"'+(ui.upBusy?" disabled":"")+'>'+(ui.upBusy?"Uploading…":"Add resource")+'</button></form></div>';
   var grp={},gl=(S.tax&&S.tax.groups||[]);
   rs.forEach(function(r){var a=areaById(r.area),g=a?a.gid:"";grp[g]=(grp[g]||0)+1});
   h+='<div class="head"><h2>Your library</h2><p class="muted small">'+rs.length+' resource'+(rs.length===1?"":"s")+'. Filter by group below.</p></div>';
@@ -1597,7 +1731,11 @@ function vLearn(){
     by[k].sort(function(x,y){return(!!x.done-!!y.done)||x.title.localeCompare(y.title)}).forEach(function(r){
       var safe=/^https?:\/\//i.test(r.url||""),st=r.status||"added",busy=ui.resBusy[r.id];
       h+='<div class="res"><div class="spread"><div style="min-width:0"><b style="overflow-wrap:anywhere">'+(safe?'<a href="'+esc(r.url)+'">'+esc(r.title)+'</a>':esc(r.title))+'</b> <span class="pill">'+esc(r.kind||"")+'</span>'+(r.note?'<div class="small muted">'+esc(r.note)+'</div>':"")+(r.asset&&r.asset.id?'<div class="small"><a href="_blob/'+esc(r.asset.id)+'">Open file</a> <span class="muted">'+esc(r.asset.name||"")+'</span></div>':"")+'</div><button class="btn ghost" data-act="del" data-coll="resources" data-id="'+r.id+'">'+(ui.confirm==="resources/"+r.id?"Confirm":"Remove")+'</button></div>';
-      h+='<div class="row"><label class="small muted" for="rst-'+r.id+'">Claude status</label><select id="rst-'+r.id+'" data-rstatus="'+r.id+'">'+RSTAT.map(function(x){return'<option value="'+x[0]+'"'+(st===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("")+'</select><label class="row small"><input type="checkbox"'+(r.done?" checked":"")+' data-act="r-done" data-id="'+r.id+'" style="width:17px;height:17px;accent-color:var(--accent)"> I have finished it</label>'+(ask?'<button class="btn" data-act="r-use" data-id="'+r.id+'"'+(busy===1?" disabled":"")+'>'+(busy===1?"Thinking…":(r.use?"Ask again":"How should Claude use this?"))+'</button>':"")+'</div>';
+      var rsk=(r.skillId&&S.skills[r.skillId])||(r.skill&&r.skill.name?list("skills").filter(function(x){return x.name===r.skill.name})[0]:null),rs2=!!r.use||st!=="added",rs3=st==="skill"||!!(rsk&&rsk.status==="have");
+      h+='<div class="rpath">'+[["Added",true],["Claude knows how to use it",rs2],["Turned into a skill",rs3]].map(function(x,i){return'<span class="rstep'+(x[1]?" ok":"")+'">'+(x[1]?"✓":String(i+1))+' '+x[0]+'</span>'}).join('<span class="rarrow" aria-hidden="true">→</span>')+'</div>';
+      var rnext=!rs2?(ask?'<button class="btn primary" data-act="r-use" data-id="'+r.id+'"'+(busy===1?" disabled":"")+'>'+(busy===1?"Thinking…":"Next: How should Claude use this?")+'</button>':""):!rs3?(rsk?'<button class="btn primary" data-act="go-claude">Next: build it on the Claude page</button><span class="small muted">'+esc(rsk.name)+' is '+esc(rsk.status)+' there.</span>':(r.skill&&r.skill.name?'<button class="btn primary" data-act="r-skill" data-id="'+r.id+'">Next: add '+esc(r.skill.name)+' to skills needed</button>':'<span class="small muted">Next: use Turn this into a skill below, or ask Claude again for a skill idea.</span>')):'<span class="small muted">All three steps are done.</span>';
+      if(rnext)h+='<div class="row">'+rnext+'</div>';
+      h+='<div class="row"><label class="small muted" for="rst-'+r.id+'">Claude status</label><select id="rst-'+r.id+'" data-rstatus="'+r.id+'">'+RSTAT.map(function(x){return'<option value="'+x[0]+'"'+(st===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("")+'</select><label class="row small"><input type="checkbox"'+(r.done?" checked":"")+' data-act="r-done" data-id="'+r.id+'" style="width:17px;height:17px;accent-color:var(--accent)"> I have finished it</label>'+(ask&&r.use?'<button class="btn" data-act="r-use" data-id="'+r.id+'"'+(busy===1?" disabled":"")+'>'+(busy===1?"Thinking…":"Ask Claude again")+'</button>':"")+'</div>';
       if(typeof busy==="string")h+='<p class="banner">'+esc(busy)+'</p>';
       if(ask){var sb=ui.skBusy[r.id];h+='<details'+(r.content||r.skillDraft?" open":"")+'><summary>Turn this into a skill</summary><div class="f" style="margin-top:8px"><label for="rc-'+r.id+'">Key content: paste the rules, steps or text you want Claude to follow</label><textarea id="rc-'+r.id+'" data-doc="resources/'+r.id+'" data-f="content" style="min-height:90px" placeholder="Paste the important parts here. The hub cannot read the uploaded file itself.">'+esc(r.content||"")+'</textarea></div><div class="row" style="margin-top:8px"><button class="btn" data-act="sk-draft" data-id="'+r.id+'"'+(sb===1?" disabled":"")+'>'+(sb===1?"Writing…":(r.skillDraft?"Write the draft again":"Draft a skill"))+'</button>'+(typeof sb==="string"?'<span class="small muted">'+esc(sb)+'</span>':"")+'</div>'+(r.skillDraft?'<div class="ai" style="margin-top:8px;max-height:320px;overflow:auto">'+esc(r.skillDraft)+'</div><div class="row" style="margin-top:8px"><button class="btn primary" data-act="sk-copy" data-id="'+r.id+'">Copy skill draft</button><span class="small muted">To install it, paste the draft into a chat with Claude and ask to save it as a skill.</span></div>':"")+'</details>'}
       if(r.use){h+='<div class="ai">'+esc(r.use)+(r.needs?'\n\nClaude needs from you: '+esc(r.needs):"")+'</div>';
@@ -1806,6 +1944,7 @@ view.addEventListener("submit",function(ev){
   else if(k==="cnote"){var cnt=document.getElementById("cn-text"),cnv=cnt&&cnt.value.trim();if(!cnv||!S.courses[id])return;cnt.value="";var nc=clone(S.courses[id]);(nc.notes=nc.notes||[]).push({date:today(),text:cnv});savedNote(write("courses",id,nc))}
   else if(k==="co-ask"){var qa=document.getElementById("ca-q"),qv=qa&&qa.value.trim();if(!qv)return;qa.value="";coAsk(id,qv,qv)}
   else if(k==="study"){var scid=id||val("st-course"),sc=S.courses[scid];if(!sc)return;var sd1=val("st-date")||today(),rp2=val("st-rep"),tp=val("st-topic"),dts2=[sd1],ssid=newId();if(rp2){var rn3=parseInt(rp2.slice(1),10);for(var r3=1;r3<rn3;r3++)dts2.push(addDays(sd1,(rp2[0]==="w"?7:1)*r3))}var tpe=document.getElementById("st-topic");if(tpe)tpe.value="";writeSeq(dts2.map(function(dx){return["tasks",newId(),{date:dx,text:"Study: "+sc.name+(tp?" · "+tp:""),topic:tp,course:scid,time:val("st-time"),dur:val("st-dur")||"60",goal:"",done:false,series:rp2?ssid:""}]})).then(function(){ui.msg=dts2.length>1?"Planned "+dts2.length+" study sessions. They are on your calendar.":"Planned. It is on your calendar on "+sd1+".";render()})}
+  else if(k==="g-sched"){var gsg=S.goals[id],gsn=gsg&&nextStep(gsg);if(!gsn)return;var gsd=val("sch-"+id)||today();write("tasks",newId(),{date:gsd,text:gsn.t,time:val("scht-"+id),goal:id,done:false,series:""}).then(function(ok){if(ok)flash("Added to your calendar on "+fmt(gsd,{weekday:"long",month:"short",day:"numeric"})+".")})}
   else if(k==="task"){var tt=val("tk-text");if(!tt)return;var t0=f.getAttribute("data-d"),rp=val("tk-rep"),dts=[t0],sid=newId();
     if(rp){var rn2=parseInt(rp.slice(1),10),ru=rp[0];for(var ri=1;ri<rn2;ri++){if(ru==="m"){var rm=pd(t0);rm.setMonth(rm.getMonth()+ri);dts.push(ymd(rm))}else dts.push(addDays(t0,(ru==="w"?7:1)*ri))}}
     writeSeq(dts.map(function(dx){return["tasks",newId(),{date:dx,text:tt,time:val("tk-time"),goal:val("tk-goal"),done:false,series:rp?sid:""}]}));if(dts.length>1){ui.msg="Added "+dts.length+" repeating tasks.";}
@@ -1821,7 +1960,7 @@ view.addEventListener("submit",function(ev){
   else if(k==="res"){
     var rt=val("rs-title");if(!rt)return;
     var fi=document.getElementById("rs-file"),file=fi&&fi.files&&fi.files[0];
-    var doc={title:rt,url:val("rs-url"),area:val("rs-area"),kind:val("rs-kind")||"guide",note:val("rs-note"),done:false,status:"added",created:today()};
+    var ru=val("rs-url");if(ru&&!/^https?:\/\//i.test(ru))ru="https://"+ru;var doc={title:rt,url:ru,area:val("rs-area"),kind:val("rs-kind")||"guide",note:val("rs-note"),done:false,status:"added",created:today()};
     var finish=function(){write("resources",newId(),doc);["rs-title","rs-url","rs-note"].forEach(function(i){var e=document.getElementById(i);if(e)e.value=""});var f2=document.getElementById("rs-file");if(f2)f2.value="";ui.upBusy=false;render()};
     if(file&&store){
       if(file.size>20*1024*1024){ui.err="That file is over 20 MB. Choose a smaller file.";render();return}
@@ -1980,13 +2119,18 @@ if(a==="tog"){var tkk=b.getAttribute("data-key");ui[tkk]=id;if(tkk==="biz"){ui.p
   if(a==="jumpx"){ui.scrollTo="grp-"+id;location.hash="#areas";return}
   if(a==="lib"){ui.lib=id||"";render();return}
   if(a==="top"){window.scrollTo(0,0);return}
-  if(a==="jump"){var je=document.getElementById("grp-"+id);if(je&&je.scrollIntoView)je.scrollIntoView({block:"start"});return}
+  if(a==="fa-tog"){var fcur=focusIds(),fon=fcur.indexOf(id)>=0;if(!fon&&fcur.length>=3){flash("You already have 3 focus areas. Remove one first.");return}savePlan("focus",function(d){d.areas=fon?fcur.filter(function(x){return x!==id}):fcur.concat([id])}).then(function(ok){if(ok)flash(fon?"Removed from your focus areas.":"Added to your focus areas.")});return}
+if(a==="ex-all"){var hr=focusIds().length>0&&(ui.exAll===false||(ui.exAll==null&&focusIds().length>=3));ui.exAll=hr?true:false;render();return}
+if(a==="jump"){if(ui.exAll!==true&&focusIds().length){ui.exAll=true;render()}var je=document.getElementById("grp-"+id);if(je&&je.scrollIntoView)je.scrollIntoView({block:"start"});return}
   if(a==="collapse"){ui.sub=null;ui.path=null;render();return}
   if(a==="f-clear"){ui.fArea="";ui.fStatus="";render();return}
   if(a==="g-close"){ui.open=null;render();return}
   if(a==="r-use"){resUse(id);return}
-  if(a==="r-skill"){var rz=S.resources[id];if(rz&&rz.skill&&rz.skill.name)write("skills",slug(rz.skill.name)+"-"+newId().slice(-3),{name:String(rz.skill.name),does:String(rz.skill.does||""),area:rz.area||"",status:"needed",gap:"Built from the resource: "+rz.title});return}
-  if(a==="g-open"){if(current()!=="goals"){ui.open=id;ui.scrollTo="goal-"+id;ui.fArea="";ui.fStatus="";location.hash="#goals";return}ui.open=ui.open===id?null:id;render()}
+  if(a==="r-skill"){var rz=S.resources[id];if(rz&&rz.skill&&rz.skill.name){var nsk=slug(rz.skill.name)+"-"+newId().slice(-3);write("skills",nsk,{name:String(rz.skill.name),does:String(rz.skill.does||""),area:rz.area||"",status:"needed",gap:(rz.needs?String(rz.needs):"")+(rz.needs?", and ":"")+"the resource "+rz.title,res:id}).then(function(ok){if(ok){var rz2=clone(S.resources[id]);rz2.skillId=nsk;write("resources",id,rz2);flash("Added to skills needed on the Claude page.")}})}return}
+if(a==="go-claude"){location.hash="#claude";window.scrollTo(0,0);return}
+  if(a==="gf"){var gh=b.getAttribute("data-h"),go=b.getAttribute("data-open"),gfo=b.getAttribute("data-focus");if(go){ui.open=go;ui.fArea="";ui.fStatus=""}if(gh&&location.hash!==gh)location.hash=gh;else render();setTimeout(function(){var el=gfo&&document.getElementById(gfo),ge=go&&document.getElementById("goal-"+go);if(el){if(el.scrollIntoView)el.scrollIntoView({block:"center"});try{el.focus()}catch(x){}}else if(ge&&ge.scrollIntoView)ge.scrollIntoView({block:"start"});else window.scrollTo(0,0)},80);return}
+if(a==="g-tog"){var gtk=b.getAttribute("data-k");try{localStorage.setItem("lh-guide-"+gtk,gCollapsed(gtk)?"0":"1")}catch(x){}render();return}
+if(a==="g-open"){if(current()!=="goals"){ui.open=id;ui.scrollTo="goal-"+id;ui.fArea="";ui.fStatus="";location.hash="#goals";return}ui.open=ui.open===id?null:id;render()}
   else if(a==="g-activate"){var g=goal(id);g.status="active";saveGoal(id,g)}
   else if(a==="g-rm"){var g2=goal(id);g2[b.getAttribute("data-list")].splice(+b.getAttribute("data-i"),1);saveGoal(id,g2)}
   else if(a==="del"){var coll=b.getAttribute("data-coll"),k=coll+"/"+id;if(ui.confirm!==k){ui.confirm=k;render();return}if(coll==="tasks"&&S.tasks[id]&&taskRest(S.tasks[id]).length>1){ui.confirm=null;render();return}ui.confirm=null;remove(coll,id)}
@@ -2005,7 +2149,7 @@ if(a==="g-view"){ui.fArea=id;ui.fStatus="";location.hash="#goals";return}
   else if(a==="p-level"){var lv=clone(S.levels||{});lv[id]=+b.getAttribute("data-i");S.levels=lv;if(db)db.doc("meta/levels").set(lv).catch(function(){ui.err="Your level could not be saved. Try again.";render()});render()}
   else if(a==="p-add"){var pp=pathFor(id),li=+b.getAttribute("data-i"),t=pp&&pp.levels[li]&&pp.levels[li].goals[+b.getAttribute("data-j")];if(!t)return;write("goals",newId(),{title:t,area:id,sub:"",target:"",due:"",why:"From the "+areaName(id)+" pathway, level "+(li+1)+": "+pp.levels[li].name+".",status:"active",milestones:[],steps:[],created:today(),updated:today()}).then(function(ok){if(ok)flash("Added to your Goals. Tap View to see it.")})}
   else if(a==="p-map")mapPath(id);
-  else if(a==="rv-add"){var rvi=+b.getAttribute("data-i"),rvt=ui.review&&ui.review.data&&ui.review.data.tasks[rvi];if(!rvt)return;write("tasks",newId(),{date:val("rv-date")||addDays(today(),1),text:String(rvt.text),time:"",goal:"",done:false});rvt.added=true;render()}
+  else if(a==="rv-add"){var rvi=+b.getAttribute("data-i"),rvt=ui.review&&ui.review.data&&ui.review.data.tasks[rvi];if(!rvt)return;write("tasks",newId(),{date:val("rv-date")||addDays(today(),1),text:String(rvt.text),time:"",goal:"",done:false});rvt.added=true;if(ui.review&&ui.review.data)savePlan("review",function(x){x.at=ui.review.at||today();x.data=ui.review.data});render()}
   else if(a==="review")review();
   else if(a==="review-save"){write("log",newId(),{date:today(),kind:"check-in",area:"",text:"Mentor review\n"+ui.review.text});ui.review=null;render()}
 });
@@ -2047,7 +2191,7 @@ function review(){
   var data={latestJournalPatterns:(function(){var rr=pdoc("jpat").reports||[],lr=rr[rr.length-1];return lr?{date:lr.at,summary:lr.summary,blindSpot:lr.blindSpot,experiments:(lr.experiments||[]).map(function(x){return x.act})}:null})(),goals:list("goals").filter(function(g){return g.status!=="done"}).map(function(g){var n=nextStep(g),pt=g.points||[];return{title:g.title,area:areaName(g.area),status:g.status,stepsDonePercent:pct(g),due:g.due||"",target:g.target||"",measures:g.metric||"",firstResult:pt.length?pt[0]:null,latestResult:pt.length?pt[pt.length-1]:null,resultsRecorded:pt.length,nextStep:n?n.t:"",lastUpdated:g.updated||""}}),habits:list("habits").map(function(x){var c=0;for(var i=0;i<7;i++)if((x.days||{})[dayStr(i)])c++;return{name:x.name,doneLast7Days:c,streak:streak(x)}}),journal:jd,notes:list("log").sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,8).map(function(l){return{date:l.date,kind:l.kind,text:String(l.text).slice(0,300)}}),fitness:(function(){var w0=wkStart(today()),ws=list("workouts"),t0=today();return{sessionsDoneThisWeek:ws.filter(function(x){return x.date>=w0&&x.date<=t0&&isDone(x)}).length,sessionsScheduledThisWeek:ws.filter(function(x){return x.date>=w0&&x.date<=addDays(w0,6)}).length,sessionsDoneLast28Days:ws.filter(function(x){return x.date>=addDays(t0,-27)&&x.date<=t0&&isDone(x)}).length,scheduledButMissedLast28Days:ws.filter(function(x){return x.date>=addDays(t0,-27)&&x.date<t0&&!isDone(x)}).length,checkInsDone:list("checkins").filter(function(c){return c.done}).length,checkInsMissed:list("checkins").filter(function(c){return!c.done&&c.date<t0}).length,nutritionDaysLoggedLast7:(function(){var n=0;for(var i=0;i<7;i++){var m=S.meals[dayStr(i)];if(m&&(m.m||[]).some(function(x){return x&&(x.items||[]).length}))n++}return n})(),numbers:list("trackers").filter(function(t){return t.tab==="fit"}).map(function(t){var p=t.points||[];return{name:t.name,first:p[0]||null,latest:p[p.length-1]||null}})}})(),business:(function(){var w0=wkStart(today()),c={},cs=list("clients"),st={};list("acts").forEach(function(a){if(a.date>=w0)c[a.type]=(c[a.type]||0)+1});cs.forEach(function(x){st[x.status]=(st[x.status]||0)+1});return{activitiesThisWeek:c,clientsByStage:st,overdueClientActions:cs.filter(function(x){return x.nextDate&&x.nextDate<today()&&x.status!=="past"}).length,money:(function(){var o=[],d0=pd(today().slice(0,7)+"-01");for(var i=2;i>=0;i--){var d=new Date(d0);d.setMonth(d0.getMonth()-i);var k=ymd(d).slice(0,7),f=function(kind){return Math.round(list("money").filter(function(x){return x.kind===kind&&(x.date||"").slice(0,7)===k}).reduce(function(a,x){return a+num(x.amount)},0))};o.push({month:k,income:f("income"),expenses:f("expense")})}return o})(),personalMoney:(function(){var mo=today().slice(0,7),pm=list("pmoney").filter(function(x){return(x.date||"").slice(0,7)===mo}),ac=list("accounts");return{incomeThisMonth:Math.round(pm.filter(function(x){return x.kind==="income"}).reduce(function(a,x){return a+num(x.amount)},0)),spentThisMonth:Math.round(pm.filter(function(x){return x.kind!=="income"}).reduce(function(a,x){return a+num(x.amount)},0)),plannedSpending:Math.round((pdoc("budget").cats||[]).reduce(function(a,c){return a+num(c.amt)},0)),savingsGoals:list("savings").map(function(x){return{name:x.name,percent:num(x.target)?Math.round(100*num(x.saved)/num(x.target)):0}}),netWorthSnapshots:(pdoc("networth").pts||[]).slice(-3)}})(),invoices:(function(){var o=0,v=0;list("invoices").forEach(function(x){if(x.status==="sent"){o+=num(x.amount);if(x.due&&x.due<today())v+=num(x.amount)}});return{unpaidTotal:Math.round(o),overdueTotal:Math.round(v)}})(),openLeadValue:Math.round(list("clients").filter(function(c){return c.status==="lead"}).reduce(function(a,c){return a+num(c.value)},0)),openProjects:list("projects").filter(function(x){return x.status!=="done"}).length,overdueProjects:list("projects").filter(function(x){return x.due&&x.due<today()&&x.status!=="done"}).length,numbers:list("trackers").filter(function(t){return t.tab==="biz"}).map(function(t){var p=t.points||[];return{name:t.name,first:p[0]||null,latest:p[p.length-1]||null}})}})(),planner:(function(){var t=today(),m=pdoc("m-"+t.slice(0,7)),w=pdoc("w-"+wkStart(t)),lw=pdoc("w-"+addDays(wkStart(t),-7));var f=function(p){return{focus:p.focus||"",priorities:(p.top||[]).map(function(x){return{text:x.t,done:!!x.done}}),review:{worked:p.r1||"",didNot:p.r2||"",change:p.r3||""}}};return{thisMonth:f(m),thisWeek:f(w),lastWeek:f(lw)}})(),plannedTasks:(function(){var o={last7:{planned:0,done:0},next7:[]};list("tasks").forEach(function(t){for(var i=0;i<7;i++){if(t.date===dayStr(i)){o.last7.planned++;if(t.done)o.last7.done++}}for(var j=1;j<=7;j++){if(t.date===addDays(today(),j)&&!t.done&&o.next7.length<15)o.next7.push({date:t.date,text:String(t.text).slice(0,80)})}});return o})(),claudeSkillsNeeded:list("skills").filter(function(s){return s.status==="needed"}).map(function(s){return s.name}),openImprovements:list("improve").filter(function(x){return x.status!=="done"}).map(function(x){return x.who+": "+x.text})};
   var p="You are an experienced, direct mentor reviewing someone's goal tracker with them. Today is "+today()+". Their data as JSON:\n"+JSON.stringify(data)+"\n\nJudge whether their actions (steps, habits, tasks, training, business activity, journal) are producing results (the recorded result numbers and money figures). Return ONLY a JSON object, no other text: {\"assessment\":\"one or two sentences: are the actions producing results, and how you know\",\"working\":\"one or two sentences\",\"notWorking\":\"one or two sentences\",\"change\":\"the single highest-impact change\",\"tasks\":[up to five objects {\"text\":\"a specific task for next week, under 12 words\",\"why\":\"which goal or number it serves, under 10 words\"}, most important first],\"claudeNeeds\":\"one skill, tool or piece of information Claude should have to help more\"}. Be honest and specific to the data. Where there are no result numbers yet, say that effectiveness cannot be judged and name the number to start recording. "+GUARD;
   ask(p,{cache:false}).then(function(r){var m=(r&&r.text||"").match(/\{[\s\S]*\}/),d=null;try{d=m&&JSON.parse(m[0])}catch(e){}
-    if(d&&d.assessment){ui.review={data:d,done:true,text:"Assessment: "+d.assessment+"\nWorking: "+(d.working||"")+"\nNot working: "+(d.notWorking||"")+"\nChange this: "+(d.change||"")+"\nNext week:\n"+(d.tasks||[]).map(function(t){return"- "+t.text+(t.why?" ("+t.why+")":"")}).join("\n")+"\nClaude needs: "+(d.claudeNeeds||"")}}
+    if(d&&d.assessment){savePlan("review",function(x){x.at=today();x.data=d;x.text=""});ui.review={at:today(),data:d,done:true,text:"Assessment: "+d.assessment+"\nWorking: "+(d.working||"")+"\nNot working: "+(d.notWorking||"")+"\nChange this: "+(d.change||"")+"\nNext week:\n"+(d.tasks||[]).map(function(t){return"- "+t.text+(t.why?" ("+t.why+")":"")}).join("\n")+"\nClaude needs: "+(d.claudeNeeds||"")}}
     else ui.review={text:(r&&r.text)||"",done:true};render()},function(e){ui.review={error:failMsg(e)};render()});
 }
 

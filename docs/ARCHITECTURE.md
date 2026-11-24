@@ -33,6 +33,8 @@ Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, h
 | `n-targets`, `n-<weekstart>`, `n-saved` | Nutrition targets, week, saved meals |
 | `ci-fields` | Check-in fields template |
 | `budget`, `networth` | Money |
+| `focus` | `{areas:[areaId]}` — up to 3 Explore focus areas (shown first; others fold away at 3) |
+| `review` | `{at,data,text}` — the latest mentor review, shown again on Today and used by the weekly rhythm |
 | `skrank` | `{order:[{id,why}],at}` — Claude's ranking of which skill to build first |
 | `jpat` | `{reports:[{at,days,summary,patterns:[{title,detail,kind}],blindSpot,strengths,experiments:[{act,why,measure}],question,track}]}` — Journal pattern reviews (last 12). The mentor review reads the latest one. |
 | `jp-<date>` | `{ai:{questions,track,at}}` — the last Ask Claude journal suggestions for that day |
@@ -52,6 +54,15 @@ Selected record shapes:
 - `socials` (one doc per platform): `{profile,name,created,posts:[{img:{id,name},caption,status,date}],stats:[{date,followers,reach,engagement,visits,clicks}]}`. Pillars, personas, research and strategy were removed in favour of account documents (`plans/sd-<profileId>`).
 
 For a relational database, the nested arrays (posts, stats, docs, links, images, milestones, steps) are the natural candidates to become their own tables.
+
+## Workflow guidance
+
+- Navigation is grouped in workflow order: Daily (Today, Planner, Journal), Direction (Explore, Goals), Areas (Fitness, Learning, Business, Social, Money), Claude (Claude, Library), Hub (Search, Backup). Phone bottom bar: Today, Planner, Goals, Fitness, Social, More.
+- `guideHtml(key,title,steps)` draws a step guide that ticks itself from data, with a Do this next button; collapse state is per browser (localStorage `lh-guide-<key>`). Used by `goalsGuide`, `exploreGuide`, `libraryGuide`, `claudeGuide`.
+- `data-act="gf"` jumps to a page (`data-h`), opens a goal (`data-open`) and focuses a field (`data-focus`).
+- Goals: `goalFlags(g)` (needs a target, needs a date, no steps, next step not scheduled, no result in 2 weeks); the goal's Next step box schedules a task linked by `goal`.
+- Today: `rhythmHtml()` (plan week, daily check-in, patterns, mentor review).
+- Library resources keep `skillId` when their suggested skill is added; skills keep `res`.
 
 ## Helpers worth knowing
 

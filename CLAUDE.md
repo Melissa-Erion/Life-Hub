@@ -45,6 +45,7 @@ Do not start a rewrite until she has chosen. `docs/ARCHITECTURE.md` has the deta
 - Check the real result before saying something works. Take screenshots in light, dark and phone width for visual changes.
 - Plain language in the UI; no financial advice wording on the Money page (it records and totals only).
 - She is credit-conscious: propose before large changes.
+- Publishing: the live app is GitHub Pages, deployed from `main`. Melissa has said tested changes can go to `main` without asking (Nov 24, 2026). Still check the deploy goes live and tell her when it has.
 
 ## Gotchas
 

@@ -650,6 +650,22 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+.giftgrid{align-items:stretch}
+.giftcard{gap:10px}
+.gchead{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+.gcname{display:flex;flex-direction:column;gap:2px;min-width:0}
+.gcname b{font-family:var(--display);font-size:1.15rem;font-weight:900;letter-spacing:-.01em}
+.giftrows{display:flex;flex-direction:column}
+.giftrow{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+.giftrow .gr-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.giftrow .gr-st{flex:0 0 112px;font-size:.84rem;padding:5px 8px;height:34px}
+.giftrow .gr-del{padding:4px 8px}
+.giftrow.isdone b{text-decoration:line-through;color:var(--muted)}
+.giftrow .pill{font-size:.6rem;padding:1px 6px}
+form.gq{gap:6px}
+form.gq .gqpriv{flex:0 0 auto;font-size:.84rem}
+@media (max-width:760px){.card > form.gq > input,.card > form.gq > select{flex:1 1 40% !important}.card > form.gq > input:first-child{flex:1 1 100% !important}.card > form.gq > .btn{flex:0 1 auto}}
+
 .famnav{display:flex;flex-direction:column;gap:10px}
 .famg .btn{font-weight:800;padding:9px 16px}
 .famnav .jump.sub{margin-top:0}
@@ -2480,6 +2496,10 @@ function giftBox(g){
   var coll=g.secret?"gifts":"f_gifts";
   return'<div class="mini fchore'+(g.status==="given"?" isdone":"")+'"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(g.idea)+'</b>'+(g.secret?'<span class="pill">Private</span>':"")+'</div><span class="small muted">'+esc(g.occasion||"Gift")+(g.year?" "+esc(g.year):"")+(g.price?" · "+cash(num(g.price)):"")+'</span>'+(g.where?'<span class="small" style="overflow-wrap:anywhere">'+(/^https?:\/\//.test(g.where)?'<a href="'+esc(g.where)+'" target="_blank" rel="noopener">Link</a>':esc(g.where))+'</span>':"")+'<div class="row"><select data-gst="'+g.id+'" data-coll="'+coll+'" aria-label="Gift status" style="flex:1 1 120px">'+GST.map(function(s){return'<option value="'+s[0]+'"'+((g.status||"idea")===s[0]?" selected":"")+'>'+s[1]+'</option>'}).join("")+'</select><button class="btn ghost" style="padding:4px 10px;font-size:.8rem" data-act="del" data-coll="'+coll+'" data-id="'+g.id+'">'+(ui.confirm===coll+"/"+g.id?"Confirm":"Delete")+'</button></div></div>';
 }
+function giftRow(g){
+  var coll=g.secret?"gifts":"f_gifts",lk=g.where&&/^https?:\/\//.test(g.where);
+  return'<div class="giftrow'+(g.status==="given"?" isdone":"")+'"><div class="gr-main"><b style="overflow-wrap:anywhere">'+esc(g.idea)+'</b><span class="small muted">'+esc(g.occasion||"Gift")+(g.year?" "+esc(g.year):"")+(g.price?" · "+cash(num(g.price)):"")+(g.where?" · "+(lk?'<a href="'+esc(g.where)+'" target="_blank" rel="noopener">link</a>':esc(g.where)):"")+(g.secret?' · <span class="pill">Private</span>':"")+'</span></div><select class="gr-st" data-gst="'+g.id+'" data-coll="'+coll+'" aria-label="Status of '+esc(g.idea)+'">'+GST.map(function(x){return'<option value="'+x[0]+'"'+((g.status||"idea")===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("")+'</select><button class="btn ghost gr-del" aria-label="Delete '+esc(g.idea)+'" data-act="del" data-coll="'+coll+'" data-id="'+g.id+'">'+(ui.confirm===coll+"/"+g.id?"Confirm":"×")+'</button></div>';
+}
 function famGiftsView(){
   var gs=allGifts(),f=ui.gf||"open",y=+today().slice(0,4);
   var occ=[];famPeople().forEach(function(p){var nb=nextBday(p.birthday);if(nb&&daysTo(nb)<=120)occ.push({who:p.name,what:"Birthday",d:nb})});
@@ -2487,21 +2507,32 @@ function famGiftsView(){
   occ.sort(function(a,b){return a.d.localeCompare(b.d)});
   var h=vh("Coming up","next four months");
   h+=occ.length?'<div class="grid g3 fill rail">'+occ.map(function(o){var n=gs.filter(function(g){return g.status!=="given"&&(o.who?g.forName===o.who&&g.occasion==="Birthday":g.occasion==="Christmas")}).length;return'<div class="mini"><span class="small muted">'+esc(whenWord(o.d))+(daysTo(o.d)>6?" · in "+daysTo(o.d)+" days":"")+'</span><b>'+esc(o.who?o.who+"’s birthday":o.what)+'</b><span class="small">'+(n?n+" gift"+(n>1?"s":"")+" planned":"Nothing planned yet")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="gift-for" data-who="'+esc(o.who)+'" data-occ="'+o.what+'">Add an idea</button></div>'}).join("")+'</div>':'<div class="empty small">No birthdays in the next four months. Add birthdays on the People and pets tab.</div>';
-  h+=vh("Add a gift");
+  var shown=gs.filter(function(g){return f==="all"||(f==="given"?g.status==="given":g.status!=="given")});
+  h+=vh("Gift list",gs.filter(function(g){return g.status!=="given"}).length+" still to give");
+  h+=tog("gf",[["open","Still to give"],["given","Given"],["all","All"]]);
+  var ppl=famPeople().filter(function(p){return p.kind!=="pet"}),names=ppl.map(function(p){return p.name}),byP={};
+  shown.forEach(function(g){var n=g.forName||"Someone";(byP[n]=byP[n]||[]).push(g)});
+  gs.forEach(function(g){var n=g.forName||"Someone";if(names.indexOf(n)<0&&byP[n]&&names.indexOf(n)<0)names.push(n)});
+  Object.keys(byP).forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
+  var xmas=+today().slice(0,4)+"-12-25";if(xmas<today())xmas=(+today().slice(0,4)+1)+"-12-25";var defOcc=daysTo(xmas)<=60?"Christmas":"Birthday";
+  h+='<div class="grid g2 fill2 giftgrid">'+names.map(function(n,i){
+    var p=ppl.filter(function(x){return x.name===n})[0],items=(byP[n]||[]).sort(function(a,b){return(a.status==="given")-(b.status==="given")||(a.occasion||"").localeCompare(b.occasion||"")||(a.idea||"").localeCompare(b.idea||"")}),all=gs.filter(function(g){return(g.forName||"Someone")===n&&g.status!=="given"}),tot=all.reduce(function(t,g){return t+num(g.price)},0),nb=p?nextBday(p.birthday):null;
+    var c='<div class="card giftcard"><div class="gchead">'+avatar(p||{name:n})+'<div class="gcname"><b>'+esc(n)+'</b><span class="small muted">'+all.length+' to give'+(tot?' · '+cash(tot):"")+(nb?' · birthday '+esc(whenWord(nb))+(daysTo(nb)>6?" (in "+daysTo(nb)+" days)":""):"")+'</span></div></div>';
+    c+=items.length?'<div class="giftrows">'+items.map(giftRow).join("")+'</div>':'<p class="small muted">'+(f==="given"?"Nothing given yet.":"No gift ideas yet.")+'</p>';
+    c+='<form class="add gq" data-form="giftq" data-who="'+esc(n)+'"><input type="text" id="gq-'+i+'-idea" class="keep" placeholder="Add a gift for '+esc(n)+'" aria-label="Gift for '+esc(n)+'" style="flex:3 1 160px"><select id="gq-'+i+'-occ" class="keep" aria-label="Occasion" style="flex:1 1 110px">'+GOCC.map(function(o){return"<option"+(o===defOcc?" selected":"")+">"+o+"</option>"}).join("")+'</select><input type="text" inputmode="decimal" id="gq-'+i+'-price" class="keep" placeholder="Price" aria-label="Price (optional)" style="flex:0 1 80px"><label class="gshare gqpriv"><input type="checkbox" id="gq-'+i+'-sec"> Private</label><button class="btn" type="submit">Add</button></form></div>';
+    return c}).join("")+'</div>';
+  h+=vh("Gift for someone else","not in your profiles");
   var dl='<datalist id="gift-people">'+famPeople().map(function(p){return'<option value="'+esc(p.name)+'">'}).join("")+'</datalist>';
   h+='<div class="card"><form class="fform" data-form="gift"><div class="row fwrap"><div class="f"><label for="gf-for">For</label><input type="text" id="gf-for" class="keep" list="gift-people" placeholder="Name" value="'+esc(ui.gfFor||"")+'"></div><div class="f"><label for="gf-occ">Occasion</label><select id="gf-occ" class="keep">'+GOCC.map(function(o){return'<option'+(ui.gfOcc===o?" selected":"")+'>'+o+'</option>'}).join("")+'</select></div><div class="f" style="flex:2 1 220px"><label for="gf-idea">Gift</label><input type="text" id="gf-idea" class="keep" placeholder="What it is"></div></div><div class="row fwrap"><div class="f" style="flex:0 1 140px"><label for="gf-price">Price (optional)</label><input type="text" inputmode="decimal" id="gf-price" class="keep"></div><div class="f" style="flex:2 1 220px"><label for="gf-where">Where to get it or link</label><input type="text" inputmode="url" id="gf-where" class="keep"></div></div>'+dl+'<label class="gshare"><input type="checkbox" id="gf-secret"> Keep private <span class="small muted">· only you can see it, for gifts for each other</span></label><div class="row"><button class="btn primary" type="submit">Add gift</button></div></form></div>';
-  var shown=gs.filter(function(g){return f==="all"||(f==="given"?g.status==="given":g.status!=="given")});
-  h+=vh("Gift list",gs.filter(function(g){return g.status!=="given"}).length+" not given yet");
-  h+=tog("gf",[["open","Still to give"],["given","Given"],["all","All"]]);
-  var by={};shown.forEach(function(g){(by[g.forName||"Someone"]=by[g.forName||"Someone"]||[]).push(g)});
-  var names=Object.keys(by).sort();
-  h+=names.length?'<div class="cols">'+names.map(function(n){return'<div class="col"><div class="row"><h3>'+esc(n)+'</h3><span class="pill">'+by[n].length+'</span></div>'+by[n].sort(function(a,b){return(a.status==="given")-(b.status==="given")||(a.idea||"").localeCompare(b.idea||"")}).map(giftBox).join("")+'</div>'}).join("")+'</div>':'<div class="empty small">'+(gs.length?"Nothing here.":"No gifts yet. Jot ideas down whenever you hear one.")+'</div>';
   return h;
 }
 function moneyClick(a,id,b){
   if(a==="hm-mv"){var r=pd(hMonth()+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.hm=ymd(r).slice(0,7);render();return true}
   if(a==="hm-now"){ui.hm=null;render();return true}
-  if(a==="gift-for"){ui.gfFor=b.getAttribute("data-who");ui.gfOcc=b.getAttribute("data-occ");var gff=document.getElementById("gf-for");if(gff)gff.value=ui.gfFor;var gfo=document.getElementById("gf-occ");if(gfo)gfo.value=ui.gfOcc;render();var i=document.getElementById(ui.gfFor?"gf-idea":"gf-for");if(i){i.scrollIntoView({block:"center"});i.focus()}return true}
+  if(a==="gift-for"){var gw=b.getAttribute("data-who"),go=b.getAttribute("data-occ"),gfm=gw?[].slice.call(view.querySelectorAll('form[data-form="giftq"]')).filter(function(x){return x.getAttribute("data-who")===gw})[0]:null;
+    if(!gw){var gfs=view.querySelectorAll('form[data-form="giftq"] select');[].forEach.call(gfs,function(x){x.value="Christmas"});var g0=view.querySelector('form[data-form="giftq"] input[type="text"]');if(g0){g0.scrollIntoView({block:"center"});g0.focus()}return true}
+    if(gfm){gfm.querySelector("select").value=go;var gi=gfm.querySelector('input[type="text"]');gi.scrollIntoView({block:"center"});gi.focus();return true}
+    ui.gfFor=gw;ui.gfOcc=b.getAttribute("data-occ");var gff=document.getElementById("gf-for");if(gff)gff.value=ui.gfFor;var gfo=document.getElementById("gf-occ");if(gfo)gfo.value=ui.gfOcc;render();var i=document.getElementById(ui.gfFor?"gf-idea":"gf-for");if(i){i.scrollIntoView({block:"center"});i.focus()}return true}
   return false;
 }
 function moneySubmit(k,id,f){
@@ -2511,6 +2542,9 @@ function moneySubmit(k,id,f){
   if(k==="hmoney"){var am=val("hm-amt");if(!num(am)){ui.err="Add an amount.";render();return true}var d=val("hm-date")||today();savedNote(write("f_hmoney",newId(),{kind:val("hm-kind")||"out",date:d,amount:am,cat:val("hm-cat"),what:val("hm-what"),by:me,byName:mn}));document.getElementById("hm-amt").value="";document.getElementById("hm-what").value="";return true}
   if(k==="hsave"){var sn=val("hs-name");if(!sn)return true;write("f_hsave",newId(),{name:sn,target:val("hs-target"),saved:val("hs-saved")||"0",due:val("hs-due"),log:[],created:today()});["hs-name","hs-target","hs-saved","hs-due"].forEach(function(x){document.getElementById(x).value=""});return true}
   if(k==="hsadd"){var x=S.f_hsave[id],ad=num(val("hsa-"+id));if(!x||!ad)return true;x=clone(x);x.saved=String(Math.round((num(x.saved)+ad)*100)/100);(x.log=x.log||[]).push({date:today(),amount:ad,by:me,byName:mn});x.log=x.log.slice(-50);write("f_hsave",id,x).then(function(ok){if(ok)flash("Added "+cash(ad)+".")});return true}
+  if(k==="giftq"){var who=f.getAttribute("data-who"),pre=f.querySelector('input[type="text"]').id.replace(/-idea$/,""),qi=val(pre+"-idea");if(!qi)return true;var qo=val(pre+"-occ")||"Birthday",qs=document.getElementById(pre+"-sec").checked,fy2=+today().slice(0,4);
+    savedNote(write(qs?"gifts":"f_gifts",newId(),{forName:who,occasion:qo,idea:qi,price:val(pre+"-price"),where:"",status:"idea",year:qo==="Christmas"&&today().slice(5)>"12-25"?fy2+1:fy2,by:me,byName:mn,created:today()}));
+    document.getElementById(pre+"-idea").value="";document.getElementById(pre+"-price").value="";document.getElementById(pre+"-sec").checked=false;return true}
   if(k==="gift"){var idea=val("gf-idea");if(!idea){ui.err="Write what the gift is.";render();return true}var wh=val("gf-where");if(wh&&/^[a-z0-9-]+\.[a-z]{2,}/i.test(wh)&&!/\s/.test(wh))wh="https://"+wh;
     var sec=document.getElementById("gf-secret").checked,occ2=val("gf-occ")||"Birthday",fy=+today().slice(0,4);
     var g={forName:val("gf-for"),occasion:occ2,idea:idea,price:val("gf-price"),where:wh,status:"idea",year:occ2==="Christmas"&&today().slice(5)>"12-25"?fy+1:fy,by:me,byName:mn,created:today()};

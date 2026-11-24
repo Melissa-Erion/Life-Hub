@@ -227,6 +227,7 @@
     clearTimeout(t._h);
     t._h = setTimeout(function () { t.style.display = "none"; }, /…$/.test(m) ? 60000 : 6000);
   }
+  window.lhToast = toast;
 
   /* ---------- Backup page: sign out, import ---------- */
   document.addEventListener("click", function (e) {

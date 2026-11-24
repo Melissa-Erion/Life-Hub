@@ -506,6 +506,8 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 /* Open and Delete stacked on the right of a box */
 .boxacts{display:flex;flex-direction:column;align-items:stretch;gap:6px;flex:none}
 .boxacts .btn{padding:4px 12px;font-size:.8rem;text-align:center}
+/* Save bar at the bottom of cards with writing boxes */
+.savebar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px}
 </style>
 </head>
 <body>
@@ -563,12 +565,14 @@ var chain={};
 function write(coll,id,data){
   if(!db)return Promise.resolve();
   var k=coll+"/"+id;
-  chain[k]=(chain[k]||Promise.resolve()).then(function(){return db.collection(coll).doc(id).set(data)}).catch(function(e){
+  chain[k]=(chain[k]||Promise.resolve()).then(function(){return db.collection(coll).doc(id).set(data)}).then(function(){return true}).catch(function(e){
     if(e&&e.code==="invalid_argument"){canWrite=false}
-    ui.err="That change could not be saved. Check your connection and try again.";render();
+    ui.err="That change could not be saved. Check your connection and try again.";render();return false;
   });
   return chain[k];
 }
+function flash(m){if(window.lhToast)window.lhToast(m)}
+function savedNote(p){if(p&&p.then)p.then(function(ok){if(ok)flash("Saved")})}
 function writeSeq(items){return items.reduce(function(pr,it){return pr.then(function(){return write(it[0],it[1],it[2])})},Promise.resolve())}
 function remove(coll,id){
   if(!db)return Promise.resolve();
@@ -1217,7 +1221,7 @@ function subsHtml(a){
       if(!it)h+='<p class="small muted">No ideas saved for this one yet. Add your own goal in Goals.</p>';
       else [["Foundations",0,""],["What top performers add",1,"hi"]].forEach(function(t){
         h+='<h4 class="'+t[2]+'">'+t[0]+'</h4>';
-        it[t[1]].forEach(function(g,j){var has=hasGoal(g);h+='<div class="idea"><span>'+esc(g)+'</span>'+(has?'<span class="pill done">Added</span>':'<button class="btn" data-act="l-add" data-id="'+esc(a.id)+'" data-i="'+i+'" data-t="'+t[1]+'" data-j="'+j+'">Add</button>')+'</div>'});
+        it[t[1]].forEach(function(g,j){var has=hasGoal(g);h+='<div class="idea"><span>'+esc(g)+'</span>'+(has?'<button class="btn ghost" data-act="g-view" data-id="'+esc(a.id)+'">Added · View</button>':'<button class="btn" data-act="l-add" data-id="'+esc(a.id)+'" data-i="'+i+'" data-t="'+t[1]+'" data-j="'+j+'">Add</button>')+'</div>'});
       });
       h+='</div>';
     }
@@ -1238,7 +1242,7 @@ function pathHtml(a){
   if(ui.path===a.id){
     p.levels.forEach(function(l,i){
       h+='<div class="lv'+(i===at?" at":"")+'"><div class="g"><b>'+(i+1)+'. '+esc(l.name)+'</b>'+(i===at?'<span class="pill active">You are here</span>':'<button class="btn ghost" data-act="p-level" data-id="'+esc(a.id)+'" data-i="'+i+'">I am here</button>')+'</div>';
-      (l.goals||[]).forEach(function(g,j){var has=hasGoal(g);h+='<div class="g"><span class="small">'+esc(g)+'</span>'+(has?'<span class="pill done">Added</span>':'<button class="btn" data-act="p-add" data-id="'+esc(a.id)+'" data-i="'+i+'" data-j="'+j+'">Add goal</button>')+'</div>'});
+      (l.goals||[]).forEach(function(g,j){var has=hasGoal(g);h+='<div class="g"><span class="small">'+esc(g)+'</span>'+(has?'<button class="btn ghost" data-act="g-view" data-id="'+esc(a.id)+'">Added · View</button>':'<button class="btn" data-act="p-add" data-id="'+esc(a.id)+'" data-i="'+i+'" data-j="'+j+'">Add goal</button>')+'</div>'});
       h+='</div>';
     });
     h+='<p class="small muted">Starting points drawn from common practice, not guarantees. Change the wording and set your own numbers and dates once a goal is added.</p>';
@@ -1417,6 +1421,7 @@ function render(){
   var NAMES={money:"Money",find:"Search",data:"Backup",fit:"Fitness",biz:"Business",plan:"Planner",today:"Today",goals:"Goals",areas:"Explore",claude:"Claude",log:"Journal",learn:"Library"};
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
+  view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
   if(ui.scrollTo){var se=document.getElementById(ui.scrollTo);ui.scrollTo=null;if(se&&se.scrollIntoView)se.scrollIntoView({block:"start"})}
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e&&keep[id]!==""){e.value=keep[id]}});
   var subSel=document.getElementById("ng-sub");if(subSel&&keep["ng-area"]!==undefined){subSel.innerHTML=subOptions(val("ng-area"),keep["ng-sub"]||"")}
@@ -1499,11 +1504,11 @@ view.addEventListener("change",function(ev){
   if(e.id==="cl-file"){var cfl=e.files&&e.files[0],ccid=e.getAttribute("data-id");if(!cfl||!store||!S.clients[ccid])return;if(cfl.size>20*1024*1024){ui.err="That file is over 20 MB. Choose a smaller one.";render();return}var ckind=val("cl-kind")||"other";ui.upBusy=true;render();store.upload(cfl).then(function(r){ui.upBusy=false;var cc2=clone(S.clients[ccid]);(cc2.docs=cc2.docs||[]).push({id:r.id,name:cfl.name,kind:ckind,date:today()});write("clients",ccid,cc2);render()},function(){ui.upBusy=false;ui.err="The file could not be uploaded. Try again.";render()});return}
   if(e.id==="ci-photo"){var pf=e.files&&e.files[0],pid=e.getAttribute("data-id");if(!pf||!store||!S.checkins[pid])return;if(pf.size>20*1024*1024){ui.err="That photo is over 20 MB. Choose a smaller one.";render();return}ui.upBusy=true;render();store.upload(pf).then(function(r){ui.upBusy=false;var cc=clone(S.checkins[pid]);(cc.photos=cc.photos||[]).push({id:r.id,name:pf.name});write("checkins",pid,cc);render()},function(){ui.upBusy=false;ui.err="The photo could not be uploaded. Try again.";render()});return}
   if(e.hasAttribute("data-ex")){var xp=e.getAttribute("data-ex").split("/"),xd=S[xp[0]][xp[1]]&&clone(S[xp[0]][xp[1]]),xi=+e.getAttribute("data-i");if(!xd||!xd.ex||!xd.ex[xi])return;var xf=e.getAttribute("data-f"),xv=e.value.trim();if(xf==="n"&&!xv){render();return}xd.ex[xi][xf]=xv;write(xp[0],xp[1],xd);if(xp[0]==="routines")syncRoutine(xp[1],xd);return}
-  if(e.hasAttribute("data-soc")){var sid=e.getAttribute("data-soc"),sp=e.getAttribute("data-sp").split(".");socSave(sid,function(d){var o=d;for(var si=0;si<sp.length-1;si++){if(o[sp[si]]==null)o[sp[si]]={};o=o[sp[si]]}o[sp[sp.length-1]]=e.value});return}
+  if(e.hasAttribute("data-soc")){var sid=e.getAttribute("data-soc"),sp=e.getAttribute("data-sp").split(".");savedNote(socSave(sid,function(d){var o=d;for(var si=0;si<sp.length-1;si++){if(o[sp[si]]==null)o[sp[si]]={};o=o[sp[si]]}o[sp[sp.length-1]]=e.value}));return}
 if(e.hasAttribute("data-socprof")){var rpid=e.getAttribute("data-socprof"),rpn=e.value.trim();if(!rpn){render();return}savePlan("social",function(d){d.profiles=socProfiles().map(function(x){return x.id===rpid?{id:x.id,name:rpn}:x})});return}
-if(e.hasAttribute("data-doc")){var dp=e.getAttribute("data-doc").split("/"),df=e.getAttribute("data-f"),cur0=S[dp[0]]&&S[dp[0]][dp[1]];if(!cur0||(cur0[df]||"")===e.value)return;if(dp[0]==="routines"&&df==="name"&&!e.value.trim()){render();return}var nd=clone(cur0);nd[df]=e.value;write(dp[0],dp[1],nd);if(dp[0]==="routines")syncRoutine(dp[1],nd);return}
-  if(e.hasAttribute("data-plan")){var ppk=e.getAttribute("data-plan"),ppf=e.getAttribute("data-pf"),ppv=e.value;if((pdoc(ppk)[ppf]||"")===ppv)return;savePlan(ppk,function(d){d[ppf]=ppv});return}
-  if(e.hasAttribute("data-journal")){var jd=e.getAttribute("data-journal"),jt=e.value;if((S.journal[jd]&&S.journal[jd].text||"")===jt)return;if(!jt.trim()&&!S.journal[jd])return;write("journal",jd,{date:jd,text:jt});ui.saved=new Date().toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"});return}
+if(e.hasAttribute("data-doc")){var dp=e.getAttribute("data-doc").split("/"),df=e.getAttribute("data-f"),cur0=S[dp[0]]&&S[dp[0]][dp[1]];if(!cur0||(cur0[df]||"")===e.value)return;if(dp[0]==="routines"&&df==="name"&&!e.value.trim()){render();return}var nd=clone(cur0);nd[df]=e.value;savedNote(write(dp[0],dp[1],nd));if(dp[0]==="routines")syncRoutine(dp[1],nd);return}
+  if(e.hasAttribute("data-plan")){var ppk=e.getAttribute("data-plan"),ppf=e.getAttribute("data-pf"),ppv=e.value;if((pdoc(ppk)[ppf]||"")===ppv)return;savedNote(savePlan(ppk,function(d){d[ppf]=ppv}));return}
+  if(e.hasAttribute("data-journal")){var jd=e.getAttribute("data-journal"),jt=e.value;if((S.journal[jd]&&S.journal[jd].text||"")===jt)return;if(!jt.trim()&&!S.journal[jd])return;savedNote(write("journal",jd,{date:jd,text:jt}));ui.saved=new Date().toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"});return}
   if(e.hasAttribute("data-inv")){var iid=e.getAttribute("data-inv"),ix=clone(S.invoices[iid]),was=ix.status;ix.status=e.value;
     if(e.value==="paid"&&was!=="paid"){var mid=newId(),icl=ix.client&&S.clients[ix.client];ix.paidOn=today();ix.incomeId=mid;write("money",mid,{kind:"income",date:today(),amount:num(ix.amount),what:"Invoice "+(ix.number||"")+(icl?" · "+icl.name:""),invoice:iid})}
     else if(was==="paid"&&e.value!=="paid"){if(ix.incomeId&&S.money[ix.incomeId])remove("money",ix.incomeId);ix.incomeId="";ix.paidOn=""}
@@ -1566,7 +1571,8 @@ if(a==="rt-del"){if(ui.confirm!=="routines/"+id){ui.confirm="routines/"+id;rende
   if(a==="w-close"){ui.fd=null;render();return}
   if(a==="c-close"){ui.ci=null;render();return}
   if(a==="cih"){ui.cih=!ui.cih;render();window.scrollTo(0,0);return}
-  if(a==="fmn"){var fmn=+b.getAttribute("data-n");ui.fm=fmn===0?0:(ui.fm||0)+fmn;render();return}
+  if(a==="pl-save"){var pcd=b.closest(".card"),pgrp={},pps=[];if(pcd){pcd.querySelectorAll("[data-plan][data-pf]").forEach(function(x){var k2=x.getAttribute("data-plan");(pgrp[k2]=pgrp[k2]||{})[x.getAttribute("data-pf")]=x.value});Object.keys(pgrp).forEach(function(k2){var ch=Object.keys(pgrp[k2]).some(function(f2){return(pdoc(k2)[f2]||"")!==pgrp[k2][f2]});if(ch)pps.push(savePlan(k2,function(d){Object.keys(pgrp[k2]).forEach(function(f2){d[f2]=pgrp[k2][f2]})}))});pcd.querySelectorAll("[data-journal]").forEach(function(x){var jd2=x.getAttribute("data-journal"),jt2=x.value;if((S.journal[jd2]&&S.journal[jd2].text||"")!==jt2&&(jt2.trim()||S.journal[jd2]))pps.push(write("journal",jd2,{date:jd2,text:jt2}))})}Promise.all(pps).then(function(r){if(r.every(function(x){return x!==false}))flash("Saved")});return}
+if(a==="fmn"){var fmn=+b.getAttribute("data-n");ui.fm=fmn===0?0:(ui.fm||0)+fmn;render();return}
 if(a==="fw"){var fn2=+b.getAttribute("data-n");ui.fw=fn2===0?0:ui.fw+fn2;render();return}
   if(a==="nd"){var nn2=+b.getAttribute("data-n");ui.nd=nn2===0?0:ui.nd+nn2;render();return}
   if(a==="n-type"){var nd2=b.getAttribute("data-d"),nmd=clone(S.meals[nd2]||{date:nd2,m:[]});nmd.type=id;write("meals",nd2,nmd);return}
@@ -1617,11 +1623,12 @@ if(a==="tog"){var tkk=b.getAttribute("data-key");ui[tkk]=id;if(tkk==="biz"){ui.p
   else if(a==="g-plan-clear"){delete ui.plan[id];render()}
   else if(a==="g-plan-accept"){var d=ui.plan[id]&&ui.plan[id].data,g3=goal(id);if(!d||!g3)return;(d.milestones||[]).forEach(function(t){(g3.milestones=g3.milestones||[]).push({t:String(t),done:false})});(d.steps||[]).forEach(function(t){(g3.steps=g3.steps||[]).push({t:String(t),done:false})});saveGoal(id,g3);(d.skills||[]).forEach(function(s){if(s&&s.name)write("skills",slug(s.name)+"-"+newId().slice(-3),{name:String(s.name),does:String(s.does||""),area:g3.area||"",status:"needed",gap:""})});delete ui.plan[id];render()}
   else if(a==="s-open"){var sk=id+"|"+b.getAttribute("data-i");ui.sub=ui.sub===sk?null:sk;render()}
-  else if(a==="l-add"){var ar=areaById(id),si=+b.getAttribute("data-i"),sn=ar&&ar.subs[si],it=sn&&(LIB[id]||{})[sn],gt=it&&it[+b.getAttribute("data-t")][+b.getAttribute("data-j")];if(!gt)return;write("goals",newId(),{title:gt,area:id,sub:sn,target:"",due:"",why:"",metric:"",points:[],status:"active",milestones:[],steps:[],created:today(),updated:today()})}
+  else if(a==="l-add"){var ar=areaById(id),si=+b.getAttribute("data-i"),sn=ar&&ar.subs[si],it=sn&&(LIB[id]||{})[sn],gt=it&&it[+b.getAttribute("data-t")][+b.getAttribute("data-j")];if(!gt)return;write("goals",newId(),{title:gt,area:id,sub:sn,target:"",due:"",why:"",metric:"",points:[],status:"active",milestones:[],steps:[],created:today(),updated:today()}).then(function(ok){if(ok)flash("Added to your Goals. Tap View to see it.")})}
+if(a==="g-view"){ui.fArea=id;ui.fStatus="";location.hash="#goals";return}
   else if(a==="h-day"){var hd2=clone(S.habits[id]),dk=b.getAttribute("data-d");hd2.days=hd2.days||{};if(hd2.days[dk])delete hd2.days[dk];else hd2.days[dk]=1;write("habits",id,hd2)}
   else if(a==="p-open"){ui.path=ui.path===id?null:id;render()}
   else if(a==="p-level"){var lv=clone(S.levels||{});lv[id]=+b.getAttribute("data-i");S.levels=lv;if(db)db.doc("meta/levels").set(lv).catch(function(){ui.err="Your level could not be saved. Try again.";render()});render()}
-  else if(a==="p-add"){var pp=pathFor(id),li=+b.getAttribute("data-i"),t=pp&&pp.levels[li]&&pp.levels[li].goals[+b.getAttribute("data-j")];if(!t)return;write("goals",newId(),{title:t,area:id,sub:"",target:"",due:"",why:"From the "+areaName(id)+" pathway, level "+(li+1)+": "+pp.levels[li].name+".",status:"active",milestones:[],steps:[],created:today(),updated:today()})}
+  else if(a==="p-add"){var pp=pathFor(id),li=+b.getAttribute("data-i"),t=pp&&pp.levels[li]&&pp.levels[li].goals[+b.getAttribute("data-j")];if(!t)return;write("goals",newId(),{title:t,area:id,sub:"",target:"",due:"",why:"From the "+areaName(id)+" pathway, level "+(li+1)+": "+pp.levels[li].name+".",status:"active",milestones:[],steps:[],created:today(),updated:today()}).then(function(ok){if(ok)flash("Added to your Goals. Tap View to see it.")})}
   else if(a==="p-map")mapPath(id);
   else if(a==="rv-add"){var rvi=+b.getAttribute("data-i"),rvt=ui.review&&ui.review.data&&ui.review.data.tasks[rvi];if(!rvt)return;write("tasks",newId(),{date:val("rv-date")||addDays(today(),1),text:String(rvt.text),time:"",goal:"",done:false});rvt.added=true;render()}
   else if(a==="review")review();

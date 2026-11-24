@@ -701,12 +701,12 @@ form.gq .gqadd{flex:0 0 auto;margin-left:auto;padding:6px 16px;font-size:.85rem;
   .week{grid-template-columns:minmax(0,1fr) !important}
   .week .daycol.fixed .dayrows{height:auto;max-height:none}
   .week .daycol:not(.fixed){min-height:0}
-  .head + .jump > .btn,.famnav .famg > .btn{background:var(--navhd);border-color:transparent;color:var(--navhd-ink);font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;border-radius:8px;padding:9px 12px}
-  .head + .jump > .btn.on,.famnav .famg > .btn.on{background:var(--navbar);color:#fff}
+  .jump.maintabs > .btn,.famnav .famg > .btn{background:var(--navhd);border-color:transparent;color:var(--navhd-ink);font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;border-radius:8px;padding:9px 12px}
+  .jump.maintabs > .btn.on,.famnav .famg > .btn.on{background:var(--navbar);color:#fff}
   .famnav .famg > .btn{padding:9px 8px;font-size:.68rem;letter-spacing:.06em}
-  .jump.sub,.famnav .jump.sub{background:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0 0 0 0;gap:2px;width:auto;align-self:stretch}
-  .jump.sub > .btn{background:none !important;border:0;border-radius:0;color:var(--muted);font-weight:700;padding:9px 12px 10px;box-shadow:none}
-  .jump.sub > .btn.on{color:var(--ink) !important;background:linear-gradient(0deg,var(--navhd),transparent 90%) !important;box-shadow:inset 0 -3px 0 var(--navbar)}
+  .jump.sub,.famnav .jump.sub,.jump.subtabs{background:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0 0 0 0;gap:2px;width:auto;align-self:stretch}
+  .jump.sub > .btn,.jump.subtabs > .btn{background:none !important;border:0;border-radius:0;color:var(--muted);font-weight:700;padding:9px 12px 10px;box-shadow:none}
+  .jump.sub > .btn.on,.jump.subtabs > .btn.on{color:var(--ink) !important;background:linear-gradient(0deg,var(--navhd),transparent 90%) !important;box-shadow:inset 0 -3px 0 var(--navbar)}
 }
 /* ---------- phone layout: clearer hierarchy, less stacking ---------- */
 @media (max-width:760px){
@@ -2842,6 +2842,11 @@ function fitPlaceholders(){
     e.setAttribute("placeholder",pick.trim());
   });
 }
+/* Tab levels: the first tab row on a page is the main tabs; every other tab or filter row is a sub level */
+function tagTabs(){
+  var fam=view.querySelector(".famnav"),all=[].slice.call(view.querySelectorAll(".jump")).filter(function(j){return !j.closest(".famnav")});
+  all.forEach(function(j,i){j.classList.remove("maintabs","subtabs");if(!fam&&i===0&&!j.closest(".card,.mini"))j.classList.add("maintabs");else j.classList.add("subtabs")});
+}
 /* Swipe hints under sideways rows on phones */
 function railHints(){
   view.querySelectorAll(".swipehint").forEach(function(x){x.remove()});
@@ -2950,7 +2955,7 @@ function render(){
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
   view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal],textarea[data-cnf]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
-  railHints();fbBadges();fitPlaceholders();
+  tagTabs();railHints();fbBadges();fitPlaceholders();
   if(innerWidth<=760)view.querySelectorAll('.jump > .btn.on').forEach(function(bt){var j=bt.parentNode;if(j.scrollWidth<=j.clientWidth)return;var jr=j.getBoundingClientRect(),br=bt.getBoundingClientRect();if(br.left<jr.left+12||br.right>jr.right-12)j.scrollLeft+=br.left-jr.left-16});
   if(ui.scrollTo){var se=document.getElementById(ui.scrollTo);ui.scrollTo=null;if(se&&se.scrollIntoView)se.scrollIntoView({block:"start"})}
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e&&keep[id]!==""){e.value=keep[id]}});

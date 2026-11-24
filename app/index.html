@@ -650,6 +650,22 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+/* Month and week headers: arrows as round buttons, and on phones the title gets its own line */
+.calhead .row{flex-wrap:nowrap;gap:6px}
+.calhead .btn.ghost[data-n]{width:38px;height:38px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;background:var(--surface);font-size:1rem;line-height:1}
+.calhead .btn.ghost[data-n]:disabled{opacity:.35}
+@media (max-width:760px){
+  .calhead{flex-wrap:wrap;row-gap:10px}
+  .calhead h2{flex:1 1 100%;font-size:1rem}
+  .calhead .row{flex:1 1 100%;justify-content:space-between}
+  .calhead .row .btn:not([data-n]){flex:1 1 auto}
+  .rail:not(.atend),.cols:not(.atend){-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent 100%);mask-image:linear-gradient(90deg,#000 82%,transparent 100%)}
+  .swipehint{display:flex;align-items:center;gap:10px;margin-top:-4px;font-size:.76rem;color:var(--muted);font-family:var(--display);font-weight:700;letter-spacing:.04em}
+  .swipehint .sh-track{flex:1;height:3px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+  .swipehint .sh-track i{position:absolute;top:0;bottom:0;left:0;border-radius:3px;background:var(--navbar)}
+  .swipehint svg{width:14px;height:14px;flex:none}
+}
+@media (min-width:761px){.swipehint{display:none}}
 /* ---------- phone layout: clearer hierarchy, less stacking ---------- */
 @media (max-width:760px){
   main{gap:12px}
@@ -2653,6 +2669,24 @@ function s6Change(e){
   if(e.hasAttribute("data-cis")){var sk=e.getAttribute("data-cis"),sv=e.value.trim();savedNote(ciSave(function(c){c[sk]=sv}));return true}
   return false;
 }
+/* Swipe hints under sideways rows on phones */
+function railHints(){
+  view.querySelectorAll(".swipehint").forEach(function(x){x.remove()});
+  if(innerWidth>760)return;
+  view.querySelectorAll(".rail,.cols").forEach(function(r){
+    var n=r.children.length;if(n<2||r.scrollWidth<=r.clientWidth+4){r.classList.add("atend");return}
+    var hint=document.createElement("div");hint.className="swipehint";hint.setAttribute("aria-hidden","true");
+    hint.innerHTML='<span class="sh-txt"></span><span class="sh-track"><i></i></span><span class="sh-n"></span>';r.after(hint);
+    var txt=hint.querySelector(".sh-txt"),bar=hint.querySelector("i"),cnt=hint.querySelector(".sh-n");
+    var upd=function(){var max=r.scrollWidth-r.clientWidth,f=max>0?r.scrollLeft/max:1,vis=r.clientWidth/r.scrollWidth,end=r.scrollLeft>=max-4;
+      bar.style.width=Math.max(12,vis*100)+"%";bar.style.left=(f*(100-Math.max(12,vis*100)))+"%";
+      var w=r.children[0].getBoundingClientRect().width+10,i=Math.min(n,Math.round(r.scrollLeft/w)+1);if(end)i=n;
+      cnt.textContent=i+" of "+n;txt.innerHTML=end?"Swipe back":'Swipe for more <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      r.classList.toggle("atend",end)};
+    upd();r.addEventListener("scroll",upd,{passive:true});
+  });
+}
+window.addEventListener("resize",function(){if(view)railHints()});
 /* ---------- phone menu ---------- */
 (function(){
   var btn=document.getElementById("menu"),back=document.getElementById("navback"),nv=document.getElementById("mainnav");if(!btn||!nv)return;
@@ -2743,6 +2777,7 @@ function render(){
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
   view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal],textarea[data-cnf]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
+  railHints();
   if(innerWidth<=760)view.querySelectorAll('.jump > .btn.on').forEach(function(bt){var j=bt.parentNode;if(j.scrollWidth<=j.clientWidth)return;var jr=j.getBoundingClientRect(),br=bt.getBoundingClientRect();if(br.left<jr.left+12||br.right>jr.right-12)j.scrollLeft+=br.left-jr.left-16});
   if(ui.scrollTo){var se=document.getElementById(ui.scrollTo);ui.scrollTo=null;if(se&&se.scrollIntoView)se.scrollIntoView({block:"start"})}
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e&&keep[id]!==""){e.value=keep[id]}});

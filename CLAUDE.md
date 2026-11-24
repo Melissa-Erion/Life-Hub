@@ -47,9 +47,9 @@ Do not start a rewrite until she has chosen. `docs/ARCHITECTURE.md` has the deta
 - She is credit-conscious: propose before large changes.
 - Publishing: the live app is GitHub Pages, deployed from `main`. Melissa has said tested changes can go to `main` without asking (Nov 24, 2026). Still check the deploy goes live and tell her when it has.
 
-## Family portal (switched off)
+## Family page (Melissa only for now)
 
-The shared Family portal was built in Nov 2026 and switched off the same week because Patrick did not want to use it. `var FAMILY_ON=false;` near the top of the script in `app/index.html` hides it: the Family menu link and page, "Show to family" on goals, family feedback notifications and the tour's Family step. Everything else is kept: the code, the `spaces` / `space_members` / `shared_docs` tables and the family records (Melissa is the only member). Patrick's login was deleted. To bring it back: set `FAMILY_ON=true`, publish, and create a login for whoever joins (see "Family space" in `docs/ARCHITECTURE.md`). Feedback still uses the family space for storage, so it keeps working for Melissa alone.
+Patrick decided not to use the shared space, so his login was deleted (Nov 2026). Melissa still uses the Family page herself. `FAMILY_ON=true`; `famShared()` is true only when the family space has more than one member, and every sharing feature checks it: the Members section, partner goal and habit columns, "Show to family" on personal goals, private gifts, feedback notifications and "both of you" wording. If someone joins later (create their login and add a `space_members` row, see "Family space" in `docs/ARCHITECTURE.md`), those features come back by themselves. Setting `FAMILY_ON=false` hides the Family page entirely; the data stays.
 
 ## Gotchas
 

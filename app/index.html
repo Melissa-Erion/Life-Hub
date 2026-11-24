@@ -516,6 +516,12 @@ details.earlier .chat{margin-top:10px}
 .cols .card > .spread{flex-wrap:nowrap;align-items:flex-start}
 .cols .card > .spread > b{min-width:0;flex:1 1 auto}
 .cols .card > .spread > select{flex:none;width:auto}
+/* Journal entry cards */
+.jentry{display:flex;flex-direction:column;gap:6px;text-align:left;font:inherit;color:var(--ink);border:1px solid transparent;cursor:pointer;height:170px;overflow:hidden}
+.jentry b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.jentry > .muted{flex:none;margin-top:auto}
+.jentry:hover{border-color:var(--ink)}
+.jentry .jprev{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;flex:0 1 auto;max-height:5.6em;line-height:1.4}
 </style>
 </head>
 <body>
@@ -784,7 +790,7 @@ function vFind(){
   list("clients").forEach(function(c){if(hit(c.name)||hit(c.contact)||hit(c.email)||hit(c.notes))add("client",c.name,c.contact||c.status,"cl-open",'data-id="'+c.id+'"')});
   list("projects").forEach(function(x){if(hit(x.name)||hit(x.goal)||hit(x.notes))add("project",x.name,x.status,"pj-open",'data-id="'+x.id+'" data-from="projects"')});
   list("tasks").forEach(function(t){if(hit(t.text))add("task",t.text,(t.date||"no date")+(t.done?" · done":""),t.date?"pl-go":"pj-open",t.date?'data-mode="day" data-d="'+t.date+'"':'data-id="'+(t.project||"")+'" data-from="projects"')});
-  Object.keys(S.journal).forEach(function(d){if(hit(S.journal[d].text))add("journal",d,S.journal[d].text,"pl-go",'data-mode="day" data-d="'+d+'"')});
+  Object.keys(S.journal).forEach(function(d){if(hit(S.journal[d].text))add("journal",d,S.journal[d].text,"j-open",'data-d="'+d+'"')});
   list("log").forEach(function(l){if(hit(l.text))add("note",l.date,l.text,"go",'data-id="log"')});
   list("resources").forEach(function(r){if(hit(r.title)||hit(r.note))add("resource",r.title,r.note,"go",'data-id="learn"')});
   list("routines").forEach(function(r){if(hit(r.name)||(r.ex||[]).some(function(x){return hit(x.n)}))add("workout",r.name,(r.ex||[]).length+" exercises","go",'data-id="fit"')});
@@ -1374,17 +1380,35 @@ function socManage(prof,pl,profs){
 function socSave(pid,fn){var d=S.socials[pid]&&clone(S.socials[pid]);if(!d)return;fn(d);return write("socials",pid,d)}
 function vLog(){
   var lg=list("log").sort(function(a,b){return(b.date+b.id).localeCompare(a.date+a.id)});
-  var td=today(),je=S.journal[td]||{},past=Object.keys(S.journal).filter(function(d){return d!==td}).sort().reverse().slice(0,30);
+  var td=today(),je=S.journal[td]||{},past=Object.keys(S.journal).filter(function(d){return d!==td&&String(S.journal[d].text||"").trim()}).sort().reverse();
+  if(ui.jday)return vJDay(ui.jday);
   var h='<div class="head"><h1>Journal</h1><p class="muted">Write freely each day. Your mentor review reads this to understand what is going on behind the numbers.</p></div>';
   h+=vh("Today's entry",fmt(td,{weekday:"long",month:"long",day:"numeric"}));
-  h+='<div class="card"><div class="f"><label for="jr-text">Today, '+esc(td)+'</label><textarea id="jr-text" data-journal="'+td+'" style="min-height:150px" placeholder="What did you do today? What worked? What got in the way? What will you do tomorrow?">'+esc(je.text||"")+'</textarea></div><p class="small muted">'+(ui.saved?"Saved at "+esc(ui.saved)+".":"Saves when you click outside the box.")+'</p></div>';
-  if(past.length){h+=vh("Earlier entries",past.length+" shown")+'<div class="card">';past.forEach(function(d){h+='<div class="entry"><time>'+esc(d)+'</time><div style="flex:1;white-space:pre-wrap;overflow-wrap:anywhere">'+esc(S.journal[d].text||"")+'</div></div>'});h+='</div>'}
+  h+='<div class="card"><div class="f"><label for="jr-text">Today, '+esc(td)+'</label><textarea id="jr-text" data-journal="'+td+'" style="min-height:150px" placeholder="What did you do today? What worked? What got in the way? What will you do tomorrow?">'+esc(je.text||"")+'</textarea></div></div>';
+  h+=vh("Entries",past.length+" earlier entr"+(past.length===1?"y":"ies"));
+  h+='<div class="card"><div class="row"><div class="f" style="flex:0 1 240px"><label for="j-pick">Open or write another day</label><input type="date" id="j-pick" data-jpick="1" max="'+td+'"></div></div>';
+  if(!past.length)h+='<p class="muted">Earlier entries appear here as cards, one per day.</p>';
+  else{var jm=null;past.forEach(function(d){var mk3=d.slice(0,7);if(mk3!==jm){if(jm!==null)h+='</div>';jm=mk3;h+='<div class="lvl" style="margin:8px 0 2px">'+esc(fmt(d,{month:"long",year:"numeric"}))+'</div><div class="grid g3 fill">'}var tx=String(S.journal[d].text||"").trim(),wc=tx?tx.split(/\s+/).length:0;h+='<button class="mini jentry" data-act="j-open" data-d="'+d+'" aria-label="Open entry for '+esc(fmt(d,{weekday:"long",month:"long",day:"numeric"}))+'"><b>'+esc(fmt(d,{weekday:"long",month:"short",day:"numeric"}))+'</b><span class="jprev small">'+esc(tx||"No text yet")+'</span><span class="small muted">'+wc+' word'+(wc===1?"":"s")+'</span></button>'});h+='</div>'}
+  h+='</div>';
   h+='<div class="head"><h2>Wins, check-ins and lessons</h2><p class="muted small">Short dated notes. Attach one to an area so reviews can see where progress is happening.</p></div>';
   h+='<div class="card"><form class="add" data-form="log"><div class="f" style="flex:0 1 140px"><label for="lg-kind">Type</label><select id="lg-kind" class="keep"><option>win</option><option>check-in</option><option>lesson</option><option>note</option></select></div><div class="f"><label for="lg-area">Area</label><select id="lg-area" class="keep">'+areaOptions(val("lg-area"))+'</select></div><div class="f" style="flex:1 1 100%"><label for="lg-text">What happened</label><textarea id="lg-text" class="keep"></textarea></div><button class="btn primary" type="submit">Add to log</button></form></div>';
   h+='<div class="card">'+(lg.length?lg.map(entry).join(""):'<p class="muted">Nothing logged yet.</p>')+'</div>';
   return h;
 }
 
+function vJDay(d){
+  var td=today(),je=S.journal[d]||{},dates=Object.keys(S.journal).filter(function(x){return String(S.journal[x].text||"").trim()}).sort(),prev=null,next=null;
+  dates.forEach(function(x){if(x<d)prev=x;if(x>d&&!next)next=x});
+  var tx=String(je.text||"").trim(),wc=tx?tx.split(/\s+/).length:0,dk="d-"+d,lgs=list("log").filter(function(l){return l.date===d});
+  var h='<div><button class="btn ghost back" data-act="j-close">← Back to journal</button></div>';
+  h+='<div class="spread" style="align-items:center"><div class="head"><h1>'+esc(fmt(d,{weekday:"long",month:"long",day:"numeric"}))+(d===td?' <span class="todaytag">Today</span>':"")+'</h1><p class="muted">'+esc(fmt(d,{year:"numeric"}))+' · '+wc+' word'+(wc===1?"":"s")+'</p></div><div class="row"><button class="btn" data-act="j-open" data-d="'+(prev||"")+'"'+(prev?"":" disabled")+'>← Previous entry</button><button class="btn" data-act="j-open" data-d="'+(next||"")+'"'+(next?"":" disabled")+'>Next entry →</button></div></div>';
+  h+='<div class="card"><div class="f"><label for="jd-text">Journal</label><textarea id="jd-text" data-journal="'+d+'" style="min-height:260px" placeholder="What happened, what worked, what got in the way, what you will do next.">'+esc(je.text||"")+'</textarea></div></div>';
+  h+=vh("From the day planner","Saves when you click outside a box");
+  h+='<div class="card"><div class="row">'+pfield(dk,"win","Win of the day","One thing that went right")+pfield(dk,"tomorrow","First thing next day","What you planned to start with")+'</div></div>';
+  if(lgs.length)h+=vh("Logged that day",lgs.length+" note"+(lgs.length===1?"":"s"))+'<div class="card">'+lgs.map(entry).join("")+'</div>';
+  if(S.journal[d])h+='<div><button class="btn danger" data-act="del" data-coll="journal" data-id="'+d+'">'+(ui.confirm==="journal/"+d?"Confirm: delete this entry":"Delete this entry")+'</button></div>';
+  return h;
+}
 var RSTAT=[["added","Added"],["summarised","Claude knows how to use it"],["skill","Turned into a skill"]];
 function vLearn(){
   var rs=list("resources"),by={};
@@ -1617,6 +1641,7 @@ view.addEventListener("change",function(ev){
   var e=ev.target;
   if(e.hasAttribute("data-uisel")){ui[e.getAttribute("data-uisel")]=e.value;render();return}
   if(e.hasAttribute("data-rerender")){render();return}
+  if(e.hasAttribute("data-jpick")){if(e.value){ui.jday=e.value;render();window.scrollTo(0,0)}return}
   if(e.hasAttribute("data-filter")){ui[e.getAttribute("data-filter")]=e.value;render();return}
   if(e.hasAttribute("data-gfield")){var id=e.getAttribute("data-id"),g=goal(id);if(!g)return;var fld=e.getAttribute("data-gfield"),v=e.value.trim();if(fld==="title"&&!v){render();return}if(g[fld]===v)return;g[fld]=v;saveGoal(id,g);return}
   if(e.id==="im-file"){var ifl=e.files&&e.files[0],icoll=e.getAttribute("data-coll"),iid2=e.getAttribute("data-id");if(!ifl||!store||!S[icoll]||!S[icoll][iid2])return;if(ifl.size>20*1024*1024){ui.err="That image is over 20 MB. Choose a smaller one.";render();return}ui.upBusy=true;render();store.upload(ifl).then(function(r){ui.upBusy=false;var ir=clone(S[icoll][iid2]);(ir.imgs=ir.imgs||[]).push({id:r.id,name:ifl.name,date:today()});write(icoll,iid2,ir);render()},function(){ui.upBusy=false;ui.err="The image could not be uploaded. Try again.";render()});return}
@@ -1695,7 +1720,9 @@ if(a==="rt-del"){if(ui.confirm!=="routines/"+id){ui.confirm="routines/"+id;rende
   if(a==="w-close"){ui.fd=null;render();return}
   if(a==="c-close"){ui.ci=null;render();return}
   if(a==="cih"){ui.cih=!ui.cih;render();window.scrollTo(0,0);return}
-  if(a==="co-open"){ui.course=id;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
+  if(a==="j-open"){var jdd=b.getAttribute("data-d");if(!jdd)return;ui.jday=jdd;if(location.hash!=="#log")location.hash="#log";else render();window.scrollTo(0,0);return}
+if(a==="j-close"){ui.jday=null;render();window.scrollTo(0,0);return}
+if(a==="co-open"){ui.course=id;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
 if(a==="co-ai"){var qk=b.getAttribute("data-k");if(COAI[qk])coAsk(id,COAI[qk][0],COAI[qk][1]);return}
 if(a==="co-ai-save"){var asi=+b.getAttribute("data-i"),acc=S.courses[id]&&clone(S.courses[id]);if(!acc||!acc.chats||!acc.chats[asi])return;var ach=acc.chats[asi];(acc.notes=acc.notes||[]).push({date:today(),text:"From Claude, "+ach.q+":\n"+ach.a});ach.saved=true;savedNote(write("courses",id,acc));return}
 if(a==="co-ai-rm"){var ari=+b.getAttribute("data-i"),ark="coai/"+id+"/"+ari;if(ui.confirm!==ark){ui.confirm=ark;render();return}ui.confirm=null;var arc=S.courses[id]&&clone(S.courses[id]);if(arc&&arc.chats){arc.chats.splice(ari,1);write("courses",id,arc)}render();return}
@@ -1812,6 +1839,7 @@ function review(){
 lastView=current();
 window.addEventListener("hashchange",function(){var c=current();if(ui.skipPrev){ui.skipPrev=false;ui.prev=null}else if(c!==lastView){ui.prev=lastView}lastView=c;ui.confirm=null;var keepScroll=!!ui.scrollTo;render();if(!keepScroll)window.scrollTo(0,0)});
 
+document.addEventListener("click",function(ev){var l=ev.target.closest&&ev.target.closest('nav a[href^="#"], #sheet a[href^="#"]');if(!l)return;var hh=l.getAttribute("href"),rs=false;if(hh==="#log"&&ui.jday){ui.jday=null;rs=true}if(hh==="#study"&&ui.course){ui.course=null;rs=true}if(rs&&location.hash===hh)render()});
 document.querySelector("nav").addEventListener("click",function(ev){var l=ev.target.closest("a");if(l&&l.getAttribute("href")!=="#"+current())ui.skipPrev=true});
 
 /* ---------- theme ---------- */

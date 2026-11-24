@@ -26,7 +26,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));const $=q=>w.document.querySelec
  w.location.hash='#goals';await wait(20);$('button[data-act="g-open"]').click();await wait(10);
  console.log('spark',!!$('.spark'));
  $('#gp-g1').value='20';$('form[data-form="point"]').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
- w.location.hash='#log';await wait(20);$('[data-act="j-open"]').click();await wait(10);const ta=$('#jd-text');ta.value='today entry';ta.dispatchEvent(new w.Event('change',{bubbles:true}));
+ w.location.hash='#log';await wait(20);$('[data-act="j-open"]').click();await wait(10);const ta=$('textarea.jdtext');ta.value='today entry';ta.dispatchEvent(new w.Event('change',{bubbles:true}));
  w.location.hash='#today';await wait(20);$('button[data-act="g-open"]').click();await wait(30);console.log('back',$('.back')&&$('.back').textContent);$('.back').click();await wait(30);console.log('afterback',w.location.hash,!!$('.back'));
  data.resources={r1:{title:'Style guide',kind:'my document',area:'marketing',note:'n'}};
  w.location.hash='#learn';await wait(20);$('#rs-title').value='Book';$('form[data-form="res"]').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await wait(20);

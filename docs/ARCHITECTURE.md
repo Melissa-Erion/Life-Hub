@@ -33,6 +33,7 @@ Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, h
 | `n-targets`, `n-<weekstart>`, `n-saved` | Nutrition targets, week, saved meals |
 | `ci-fields` | Check-in fields template |
 | `budget`, `networth` | Money |
+| `jp-<date>` | `{ai:{questions,track,at}}` — the last Ask Claude journal suggestions for that day |
 | `social` | `{profiles:[{id,name}]}` — the Social account tabs (default one is `personal`) |
 | `sd-<profileId>` | `{docs:[{id,name,kind,date}]}` — documents uploaded for a Social account, shared by its platforms |
 

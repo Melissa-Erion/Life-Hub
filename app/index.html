@@ -523,6 +523,12 @@ details.earlier .chat{margin-top:10px}
 .jentry:hover{border-color:var(--ink)}
 .jentry .jprev{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;flex:0 1 auto;max-height:5.6em;line-height:1.4}
 .jtop{align-items:flex-end}
+/* Journal prompts */
+.jprompts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.jq{font:inherit;text-align:left;color:var(--ink);background:var(--shade);border:1px solid transparent;border-radius:12px;padding:10px 12px;cursor:pointer;line-height:1.4}
+.jq:hover{border-color:var(--ink)}
+.jq.used{opacity:.55}
+.jai{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
 </style>
 </head>
 <body>
@@ -1395,13 +1401,60 @@ function vLog(){
   return h;
 }
 
+var PERL={7:"Every day",6:"6 times a week",5:"5 times a week",4:"4 times a week",3:"3 times a week",2:"Twice a week",1:"Once a week"};
+function jFacts(d){var hs=list("habits").filter(function(x){return hper(x)===7});return{workouts:woOn(d).map(function(w){return{name:w.name,done:isDone(w)}}),tasks:tasksOn(d).map(function(t){return{task:t.text,done:!!t.done}}),dailyHabitsDone:hs.filter(function(x){return(x.days||{})[d]}).map(function(x){return x.name}),dailyHabitsMissed:hs.filter(function(x){return !(x.days||{})[d]}).map(function(x){return x.name}),plannedToStartWith:pdoc("d-"+addDays(d,-1)).tomorrow||"",winOfTheDay:pdoc("d-"+d).win||""}}
+function jPrompts(d){
+  var td=today(),past=d<=td,out=[],prevPlan=pdoc("d-"+addDays(d,-1)).tomorrow;
+  if(prevPlan)out.push("Yesterday you planned to start with “"+prevPlan+"”. Did you, and how did it go?");
+  woOn(d).forEach(function(w){if(isDone(w))out.push("You finished "+w.name+". What felt strong, and what will you change next time?");else if(past)out.push(w.name+" was planned but not done. What got in the way, and when is the next one?")});
+  var ts=tasksOn(d);
+  ts.filter(function(t){return t.course}).forEach(function(t){var c=S.courses[t.course],nm=c?c.name:"your course";if(t.done)out.push("You studied "+nm+(t.topic?" ("+t.topic+")":"")+". What is one thing you learned that you could explain to someone else?");else if(past)out.push("Study for "+nm+" was planned. What stopped it, and when will you catch up?")});
+  var nt=ts.filter(function(t){return !t.course}),open=nt.filter(function(t){return !t.done}),dn=nt.filter(function(t){return t.done});
+  if(dn.length)out.push(dn.length===1?"You finished \u201c"+dn[0].text+"\u201d. Did it move you closer to a goal?":"You finished "+dn.length+" tasks. Which one moved you closer to a goal?");
+  if(open.length&&past)out.push(open.length+(open.length===1?" task was":" tasks were")+" left open, including “"+open[0].text+"”. Which matters most tomorrow, and when will you do it?");
+  var hs=list("habits").filter(function(x){return hper(x)===7}),miss=hs.filter(function(x){return !(x.days||{})[d]});
+  if(past&&hs.length)out.push(miss.length?"You missed "+miss.map(function(x){return x.name}).slice(0,3).join(", ")+". What made it hard, and what one change would help tomorrow?":"You kept every daily habit. What made that easier than usual?");
+  var gs=list("goals").filter(function(g){return g.status==="active"}).sort(function(a,b){return a.title.localeCompare(b.title)});
+  if(gs.length){var g=gs[pd(d).getDate()%gs.length],n=nextStep(g);out.push("Your goal “"+g.title+"”"+(n?": the next step is “"+n.t+"”":"")+". Did anything today move it forward? If not, what is the smallest step for tomorrow?")}
+  if(out.length<3)out.push("What drained your energy today, and what gave you energy?");
+  if(out.length<3)out.push("If tomorrow went really well, what would you have done by lunch?");
+  return out.slice(0,6);
+}
+function jqBtn(q){return'<button class="jq" data-act="jq" data-q="'+esc(q)+'">'+esc(q)+'</button>'}
+function jAI(d){
+  if(!ask)return"";
+  var a=pdoc("jp-"+d).ai,st=ui.jai===d?ui.jaiSt:null,busy=!!(st&&st.loading);
+  var h='<div class="jai"><div class="spread" style="align-items:center"><span class="small muted">Want deeper questions, or ideas for what to track? Claude reads your goals, habits, this day and your last five entries.</span><button class="btn" data-act="j-ai" data-d="'+d+'"'+(busy?" disabled":"")+'>'+(busy?"Thinking…":(a?"Ask Claude again":"Ask Claude"))+'</button></div>';
+  if(st&&st.error)h+='<p class="banner">'+esc(st.error)+'</p>';
+  if(a){
+    if(a.questions&&a.questions.length)h+='<div class="lvl" style="margin:12px 0 4px">From Claude</div><div class="jprompts">'+a.questions.map(jqBtn).join("")+'</div>';
+    if(a.track&&a.track.length)h+='<div class="lvl" style="margin:14px 0 4px">Worth tracking</div><div class="grid g2">'+a.track.map(function(t,i){var have=list("habits").some(function(x){return x.name.toLowerCase()===String(t.name||"").toLowerCase()});return'<div class="mini"><b style="overflow-wrap:anywhere">'+esc(t.name)+'</b><span class="small">'+esc(PERL[t.per]||"")+'</span><span class="small muted">'+esc(t.why||"")+'</span>'+(have?'<span class="pill done" style="align-self:flex-start">In your habits</span>':'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="j-track" data-d="'+d+'" data-i="'+i+'">Add as a habit</button>')+'</div>'}).join("")+'</div>';
+  }
+  return h+'</div>';
+}
+function jAsk(day){
+  if(!ask||(ui.jaiSt&&ui.jaiSt.loading))return;
+  ui.jai=day;ui.jaiSt={loading:true};render();
+  var gs=list("goals").filter(function(g){return g.status==="active"}).map(function(g){var n=nextStep(g);return{goal:g.title,area:areaName(g.area),why:g.why||"",nextStep:n?n.t:"",due:g.due||""}});
+  var hb=list("habits").map(function(x){return{habit:x.name,timesPerWeek:hper(x),doneThisWeek:hweek(x)}});
+  var recent=Object.keys(S.journal).filter(function(x){return x<=day&&String(S.journal[x].text||"").trim()}).sort().reverse().slice(0,5).map(function(x){return{date:x,text:String(S.journal[x].text).slice(0,600)}});
+  var p="You help someone keep a short, useful evening journal. They find generic journal prompts unhelpful, so every question must be specific: name a real goal, habit, workout, task or something from their recent entries. Date of the entry: "+day+". Their data as JSON:\n"+JSON.stringify({goals:gs,habits:hb,thisDay:jFacts(day),recentEntries:recent})+"\n\nReturn ONLY a JSON object, no other text, in this shape: {\"questions\":[\"four short, specific journal questions for this day\"],\"track\":[{\"name\":\"a habit to track, 2 to 5 words\",\"per\":7,\"why\":\"one sentence on how tracking it helps a named goal\"}]}. Give exactly 3 track ideas that are not already in their habits; per is how many days a week, 1 to 7. Plain language, no markdown.";
+  ask(p,{cache:false}).then(function(r){
+    var m=(r&&r.text||"").match(/\{[\s\S]*\}/),o=null;try{o=m&&JSON.parse(m[0])}catch(e){}
+    if(!o||(!o.questions&&!o.track)){ui.jaiSt={error:"Claude sent an answer that could not be read. Try again."};render();return}
+    var qs=(o.questions||[]).filter(function(q){return typeof q==="string"&&q.trim()}).slice(0,6),tr=(o.track||[]).filter(function(t){return t&&t.name}).slice(0,4).map(function(t){return{name:String(t.name).slice(0,60),per:Math.max(1,Math.min(7,parseInt(t.per,10)||7)),why:String(t.why||"").slice(0,240)}});
+    savePlan("jp-"+day,function(x){x.ai={questions:qs,track:tr,at:today()}}).then(function(){ui.jaiSt=null;render()});
+  },function(e){ui.jaiSt={error:failMsg(e)};render()});
+}
 function vJDay(d){
   var td=today(),je=S.journal[d]||{},dates=Object.keys(S.journal).filter(function(x){return String(S.journal[x].text||"").trim()}).sort(),prev=null,next=null;
   dates.forEach(function(x){if(x<d)prev=x;if(x>d&&!next)next=x});
   var tx=String(je.text||"").trim(),wc=tx?tx.split(/\s+/).length:0,dk="d-"+d,lgs=list("log").filter(function(l){return l.date===d});
   var h='<div><button class="btn ghost back" data-act="j-close">← Back to journal</button></div>';
   h+='<div class="spread" style="align-items:center"><div class="head"><h1>'+esc(fmt(d,{weekday:"long",month:"long",day:"numeric"}))+(d===td?' <span class="todaytag">Today</span>':"")+'</h1><p class="muted">'+esc(fmt(d,{year:"numeric"}))+' · '+wc+' word'+(wc===1?"":"s")+'</p></div><div class="row"><button class="btn" data-act="j-open" data-d="'+(prev||"")+'"'+(prev?"":" disabled")+'>← Previous entry</button><button class="btn" data-act="j-open" data-d="'+(next||"")+'"'+(next?"":" disabled")+'>Next entry →</button></div></div>';
-  h+='<div class="card"><div class="f"><label for="jd-text">Journal</label><textarea id="jd-text" data-journal="'+d+'" style="min-height:260px" placeholder="What happened, what worked, what got in the way, what you will do next.">'+esc(je.text||"")+'</textarea></div></div>';
+  h+=vh("Prompts for this day","Tap one to add it to your entry");
+  h+='<div class="card"><div class="jprompts">'+jPrompts(d).map(jqBtn).join("")+'</div>'+jAI(d)+'</div>';
+  h+='<div class="card"><div class="f"><label for="jd-'+d+'">Journal</label><textarea id="jd-'+d+'" class="keep jdtext" data-journal="'+d+'" style="min-height:260px" placeholder="What happened, what worked, what got in the way, what you will do next.">'+esc(je.text||"")+'</textarea></div></div>';
   h+=vh("From the day planner","Saves when you click outside a box");
   h+='<div class="card"><div class="row">'+pfield(dk,"win","Win of the day","One thing that went right")+pfield(dk,"tomorrow","First thing next day","What you planned to start with")+'</div></div>';
   if(lgs.length)h+=vh("Logged that day",lgs.length+" note"+(lgs.length===1?"":"s"))+'<div class="card">'+lgs.map(entry).join("")+'</div>';
@@ -1720,6 +1773,9 @@ if(a==="rt-del"){if(ui.confirm!=="routines/"+id){ui.confirm="routines/"+id;rende
   if(a==="c-close"){ui.ci=null;render();return}
   if(a==="cih"){ui.cih=!ui.cih;render();window.scrollTo(0,0);return}
   if(a==="j-open"){var jdd=b.getAttribute("data-d");if(!jdd)return;ui.jday=jdd;if(location.hash!=="#log")location.hash="#log";else render();window.scrollTo(0,0);return}
+if(a==="jq"){var jta=document.querySelector("#view textarea.jdtext");if(!jta)return;var jqq=b.getAttribute("data-q");jta.value=(jta.value.trim()?jta.value.replace(/\s*$/,"")+"\n\n":"")+jqq+"\n";b.classList.add("used");jta.focus();try{jta.setSelectionRange(jta.value.length,jta.value.length)}catch(x){}if(jta.scrollIntoView)jta.scrollIntoView({block:"center"});return}
+if(a==="j-ai"){jAsk(b.getAttribute("data-d"));return}
+if(a==="j-track"){var jtd=b.getAttribute("data-d"),jti=+b.getAttribute("data-i"),jai=pdoc("jp-"+jtd).ai,jt=jai&&jai.track&&jai.track[jti];if(!jt)return;write("habits",newId(),{name:jt.name,per:jt.per||7,created:today(),days:{}}).then(function(ok){if(ok)flash("Added to your habits.")});return}
 if(a==="j-close"){ui.jday=null;render();window.scrollTo(0,0);return}
 if(a==="co-open"){ui.course=id;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
 if(a==="co-ai"){var qk=b.getAttribute("data-k");if(COAI[qk])coAsk(id,COAI[qk][0],COAI[qk][1]);return}

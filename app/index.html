@@ -664,10 +664,10 @@ nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
 /* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
-var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
+var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals","f_hcats","f_hbills","f_hmoney","f_hsave","f_gifts"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
 function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
-var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses"];
+var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses","gifts"];
 var view=document.getElementById("view");
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -1940,12 +1940,13 @@ function famOn(ds){
   list("f_events").forEach(function(e){if(!e.date)return;var hit=e.yearly?(e.date.slice(5)===ds.slice(5)&&e.date<=ds):(e.date===ds||(e.end&&e.date<=ds&&e.end>=ds));if(hit)out.push({kind:"event",ev:e,t:e.time||""})});
   list("f_todos").forEach(function(t){if(!t.done&&t.due===ds)out.push({kind:"job",j:"todo",it:t,t:"~"})});
   list("f_maint").forEach(function(m){if(mNext(m)===ds)out.push({kind:"job",j:"maint",it:m,t:"~"})});
+  list("f_hbills").forEach(function(b){if(b.day&&+ds.slice(8)===+b.day&&!(b.paid||{})[ds.slice(0,7)]&&ds>=today().slice(0,7)+"-01")out.push({kind:"job",j:"bill",it:b,t:"~"})});
   famPeople().forEach(function(p){if(p.birthday&&p.birthday.slice(-5)===ds.slice(5)){var a=p.birthday.length>=10?+ds.slice(0,4)-+p.birthday.slice(0,4):null;out.push({kind:"bday",p:p,t:"",age:a})}});
   return out.sort(function(a,b){return(a.kind==="bday"?"0":"1"+(a.t||"99")).localeCompare(b.kind==="bday"?"0":"1"+(b.t||"99"))});
 }
 function famUpcoming(n){var r=[];for(var i=0;i<n;i++){var ds=addDays(today(),i);famOn(ds).forEach(function(x){x.d=ds;r.push(x)})}return r}
 function famItemBox(x,full){
-  if(x.kind==="job"){var it=x.it,tm=x.j==="todo";return'<div class="mini"><span class="small muted">'+esc(whenWord(x.d))+' · '+(tm?"To-do":"Home upkeep")+'</span><b style="overflow-wrap:anywhere">'+esc(tm?it.text:it.name)+'</b><span class="small muted">'+esc(pName(it.who)||"Anyone")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="'+(tm?"chores":"upkeep")+'" data-pre="'+(tm?"ftd-":"fm-")+'" data-id="'+it.id+'">Open</button></div>'}
+  if(x.kind==="job"){var it=x.it,tm=x.j==="todo",bl=x.j==="bill";return'<div class="mini"><span class="small muted">'+esc(whenWord(x.d))+' · '+(tm?"To-do":bl?"Bill due":"Home upkeep")+'</span><b style="overflow-wrap:anywhere">'+esc(tm?it.text:it.name)+'</b><span class="small muted">'+(bl?cash(num(it.amount))+(it.auto?" · automatic":""):esc(pName(it.who)||"Anyone"))+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="'+(tm?"chores":bl?"money":"upkeep")+'" data-pre="'+(tm?"ftd-":bl?"":"fm-")+'" data-id="'+(bl?"":it.id)+'">Open</button></div>'}
   if(x.kind==="bday")return'<div class="mini fbday"><span class="small muted">'+esc(whenWord(x.d))+'</span><b>'+esc(x.p.name)+"’s birthday"+'</b><span class="small">'+(x.age!=null&&x.age>0?"Turns "+x.age:"Birthday")+'</span></div>';
   var e=x.ev,who=(e.who||[]).map(function(id){return S.f_people[id]&&S.f_people[id].name}).filter(Boolean);
   var h='<div class="mini" id="fev-'+e.id+'"><span class="small muted">'+esc(whenWord(x.d))+(e.time?" · "+esc(e.time):"")+(e.end&&e.end!==e.date&&!e.yearly?" to "+esc(e.end):"")+(e.yearly?" · every year":"")+'</span><b style="overflow-wrap:anywhere">'+esc(e.title)+'</b>';
@@ -2004,7 +2005,7 @@ function vFamily(){
   var h='<div class="head"><h1>'+esc(FAM?FAM.name:"Family")+'</h1><p class="muted">Your shared space. Each of you keeps a private hub; this page is the part you both see.</p></div>';
   if(!FAM)return h+'<div class="empty">The family space is not available in this view.</div>';
   if(!ui.fam)ui.fam="home";
-  h+=tog("fam",[["home","Overview"],["goals","Goals"],["chores","Chores"],["upkeep","Home upkeep"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
+  h+=tog("fam",[["home","Overview"],["goals","Goals"],["chores","Chores"],["upkeep","Home upkeep"],["money","Money"],["gifts","Gifts"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
   var t=ui.fam;
   if(t==="home"){
     var up=famUpcoming(14);
@@ -2019,6 +2020,8 @@ function vFamily(){
   if(t==="goals")h+=famGoalsView();
   if(t==="chores")h+=famChoresView();
   if(t==="upkeep")h+=famUpkeepView();
+  if(t==="money")h+=famMoneyView();
+  if(t==="gifts")h+=famGiftsView();
   if(t==="habits"){
     h+=vh("Family habits","separate from your personal habits");
     h+='<p class="small muted">Habits you track here are seen by both of you, so you can keep each other going. Your personal habits on Today stay private. Each square is a day, newest on the right.</p>';
@@ -2077,7 +2080,7 @@ function vHelp(){
   return h;
 }
 function famClick(a,id,b){
-  if(choresClick(a,id,b)||goalsClick(a,id,b))return true;
+  if(choresClick(a,id,b)||goalsClick(a,id,b)||moneyClick(a,id,b))return true;
   if(a==="fc-day"){ui.fday=b.getAttribute("data-d");ui.fm=ui.fday.slice(0,7);ui.fev=null;render();return true}
   if(a==="fc-mv"){var r=pd((ui.fm||(ui.fday||today()).slice(0,7))+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.fm=ymd(r).slice(0,7);render();return true}
   if(a==="fc-now"){ui.fday=today();ui.fm=null;render();return true}
@@ -2092,7 +2095,7 @@ function famClick(a,id,b){
   return false;
 }
 function famSubmit(k,id,f){
-  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f))return true;
+  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f)||moneySubmit(k,id,f))return true;
   if(k==="fhab"){var n=val("fh-name");if(!n||!famMe())return true;write("f_habits",newId(),{name:n,per:+val("fh-per")||7,owner:famMe(),days:{},created:today()}).then(function(ok){if(ok)flash("Added. Your family can see it.")});document.getElementById("fh-name").value="";return true}
   if(k==="fev"){var p=id?"fe-ed-":"fe-new-",t=val(p+"title"),d=val(p+"date");if(!t||!d){ui.err="Add what it is and the date.";render();return true}
     var who=[].slice.call(f.querySelectorAll('input[name="'+p+'who"]:checked')).map(function(x){return x.value}),en=val(p+"end");
@@ -2107,7 +2110,7 @@ function famSubmit(k,id,f){
   return false;
 }
 function famChange(e){
-  if(choresChange(e)||goalsChange(e))return true;
+  if(choresChange(e)||goalsChange(e)||moneyChange(e))return true;
   if(e.hasAttribute("data-fhtoday")){var hid=e.getAttribute("data-fhtoday"),x=S.f_habits[hid];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};if(e.checked)x.days[dayStr(0)]=1;else delete x.days[dayStr(0)];write("f_habits",hid,x);return true}
   if(e.hasAttribute("data-fp")){var pid=e.getAttribute("data-id"),fk=e.getAttribute("data-fp"),pr=S.f_people[pid];if(!pr)return true;var v=e.value.trim();if(fk==="name"&&!v){render();return true}pr=clone(pr);pr[fk]=v;savedNote(write("f_people",pid,pr));return true}
   if(e.hasAttribute("data-fbset")){var fid=e.getAttribute("data-id"),fr=S.f_feedback[fid];if(!fr)return true;fr=clone(fr);fr[e.getAttribute("data-fbset")]=e.value.trim();savedNote(write("f_feedback",fid,fr));return true}
@@ -2276,6 +2279,86 @@ function goalsChange(e){
   if(e.hasAttribute("data-fgwho")){var wid=e.getAttribute("data-id"),wi=+e.getAttribute("data-fgwho"),wv=e.value;savedNote(fgSave(wid,function(g){if(g.steps&&g.steps[wi])g.steps[wi].who=wv}));return true}
   return false;
 }
+/* ---------- family money and gifts ---------- */
+function hMonth(){return ui.hm||today().slice(0,7)}
+function hEntries(m){return list("f_hmoney").filter(function(x){return(x.date||"").slice(0,7)===m})}
+function famMoneyView(){
+  var m=hMonth(),en=hEntries(m),inc=en.filter(function(x){return x.kind==="in"}).reduce(function(a,x){return a+num(x.amount)},0),out=en.filter(function(x){return x.kind!=="in"}).reduce(function(a,x){return a+num(x.amount)},0);
+  var cats=list("f_hcats").sort(function(a,b){return a.name.localeCompare(b.name)}),planned=cats.reduce(function(a,c){return a+num(c.planned)},0);
+  var h='<div class="calhead" style="margin-top:6px"><h2>'+esc(pd(m+"-01").toLocaleDateString("en-CA",{month:"long",year:"numeric"}))+'</h2><div class="row"><button class="btn ghost" data-act="hm-mv" data-n="-1" aria-label="Previous month">←</button><button class="btn" data-act="hm-now">This month</button><button class="btn ghost" data-act="hm-mv" data-n="1" aria-label="Next month">→</button></div></div>';
+  h+='<p class="small muted">The household budget you share. It records and adds up what you enter; it does not give financial advice. Your personal Money page stays private.</p>';
+  h+='<div class="grid g4"><div class="tile"><b>'+cash(inc)+'</b><span>money in</span></div><div class="tile"><b>'+cash(out)+'</b><span>money out</span></div><div class="tile"><b>'+cash(inc-out)+'</b><span>in minus out</span></div><div class="tile"><b>'+cash(planned)+'</b><span>planned spending</span></div></div>';
+  h+=vh("Categories",cats.length?cash(planned)+" planned a month":"");
+  h+=cats.length?'<div class="grid g3 fill">'+cats.map(function(c){var used=en.filter(function(x){return x.kind!=="in"&&x.cat===c.id}).reduce(function(a,x){return a+num(x.amount)},0),pl=num(c.planned),pc=pl?Math.min(100,Math.round(100*used/pl)):0;return'<div class="mini"><div class="spread"><b>'+esc(c.name)+'</b><button class="btn ghost" style="padding:2px 8px;font-size:.8rem" data-act="del" data-coll="f_hcats" data-id="'+c.id+'">'+(ui.confirm==="f_hcats/"+c.id?"Confirm":"×")+'</button></div><span class="small">'+cash(used)+' of '+cash(pl)+(pl?(used>pl?" · "+cash(used-pl)+" over":" · "+cash(pl-used)+" left"):"")+'</span><div class="bar"><i style="width:'+pc+'%"></i></div><div class="f"><label for="hc-'+c.id+'">Planned a month</label><input type="text" inputmode="decimal" id="hc-'+c.id+'" data-hcat="'+c.id+'" value="'+esc(c.planned||"")+'"></div></div>'}).join("")+'</div>':'<div class="empty small">No categories yet. Groceries, kids, pets, eating out, household: whatever you want to keep an eye on.</div>';
+  h+='<div class="card"><form class="add" data-form="hcat"><input type="text" id="hcn-name" class="keep" placeholder="Category, for example groceries" aria-label="Category" style="flex:2 1 200px"><input type="text" inputmode="decimal" id="hcn-amt" class="keep" placeholder="Planned a month" aria-label="Planned a month" style="flex:1 1 140px"><button class="btn" type="submit">Add category</button></form></div>';
+  var bills=list("f_hbills").sort(function(a,b){return(+a.day||32)-(+b.day||32)||a.name.localeCompare(b.name)}),paid=bills.filter(function(b){return(b.paid||{})[m]}).length;
+  h+=vh("Bills",bills.length?paid+" of "+bills.length+" paid":"");
+  h+='<p class="small muted">Bills that come every month. Tick one when it is paid and it is added to this month’s money out. Unpaid bills show on the Calendar on their due day.</p>';
+  h+=bills.length?'<div class="grid g3 fill">'+bills.map(function(b){var p=(b.paid||{})[m];return'<div class="mini fchore'+(p?" isdone":"")+'"><label class="fchk"><input type="checkbox" data-hbpaid="'+b.id+'"'+(p?" checked":"")+'><b>'+esc(b.name)+'</b></label><span class="small">'+cash(num(b.amount))+(b.day?" · due the "+ordinal(+b.day):"")+(b.auto?" · automatic payment":"")+'</span><span class="small muted">'+(p?"Paid "+esc(p.date)+(p.byName?" by "+esc(p.byName):""):"Not paid yet")+(b.cat&&S.f_hcats[b.cat]?" · "+esc(S.f_hcats[b.cat].name):"")+'</span><button class="btn ghost" style="align-self:flex-start;padding:4px 10px;font-size:.8rem" data-act="del" data-coll="f_hbills" data-id="'+b.id+'">'+(ui.confirm==="f_hbills/"+b.id?"Confirm delete":"Delete")+'</button></div>'}).join("")+'</div>':'<div class="empty small">No bills yet.</div>';
+  var copts='<option value="">No category</option>'+cats.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join("");
+  h+='<div class="card"><form class="add" data-form="hbill"><input type="text" id="hb-name" class="keep" placeholder="Bill, for example hydro" aria-label="Bill" style="flex:2 1 180px"><input type="text" inputmode="decimal" id="hb-amt" class="keep" placeholder="Usual amount" aria-label="Usual amount" style="flex:1 1 120px"><input type="text" inputmode="numeric" maxlength="2" id="hb-day" class="keep" placeholder="Due day" aria-label="Day of the month it is due" style="flex:0 1 100px"><select id="hb-cat" class="keep" aria-label="Category" style="flex:1 1 140px">'+copts+'</select><label class="gshare" style="flex:0 0 auto"><input type="checkbox" id="hb-auto"> Automatic</label><button class="btn" type="submit">Add bill</button></form></div>';
+  h+=vh("Money in and out",en.length+" entries");
+  h+='<div class="card"><form class="add" data-form="hmoney"><div class="f" style="flex:0 1 130px"><label for="hm-kind">Type</label><select id="hm-kind" class="keep"><option value="out">Money out</option><option value="in">Money in</option></select></div><div class="f" style="flex:0 1 160px"><label for="hm-date">Date</label><input type="date" id="hm-date" class="keep" value="'+(m===today().slice(0,7)?today():m+"-01")+'"></div><div class="f" style="flex:0 1 120px"><label for="hm-amt">Amount</label><input type="text" inputmode="decimal" id="hm-amt" class="keep" placeholder="0.00"></div><div class="f" style="flex:1 1 150px"><label for="hm-cat">Category</label><select id="hm-cat" class="keep">'+copts+'</select></div><div class="f" style="flex:2 1 180px"><label for="hm-what">What for</label><input type="text" id="hm-what" class="keep"></div><button class="btn primary" type="submit">Add</button></form></div>';
+  var rec=en.sort(function(a,b){return(b.date+b.id).localeCompare(a.date+a.id)});
+  if(rec.length)h+='<div class="card"><div class="tablewrap"><table class="ctab"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>What for</th><th>Added by</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+rec.map(function(x){return'<tr><td>'+esc(x.date)+'</td><td>'+(x.kind==="in"?"in":"out")+'</td><td>'+esc(x.cat&&S.f_hcats[x.cat]?S.f_hcats[x.cat].name:"–")+'</td><td style="white-space:normal">'+esc(x.what||"")+'</td><td>'+esc(x.byName||"")+'</td><td style="text-align:right"><b>'+cash(num(x.amount))+'</b></td><td style="text-align:right"><button class="btn ghost" aria-label="Remove entry" data-act="del" data-coll="f_hmoney" data-id="'+x.id+'">'+(ui.confirm==="f_hmoney/"+x.id?"Confirm":"×")+'</button></td></tr>'}).join("")+'</tbody></table></div></div>';
+  var sv=list("f_hsave").sort(function(a,b){return a.name.localeCompare(b.name)}),tot=sv.reduce(function(a,x){return a+num(x.saved)},0);
+  h+=vh("Saving together",sv.length?cash(tot)+" saved":"");
+  h+=sv.length?'<div class="grid g3 fill">'+sv.map(function(x){var t=num(x.target),v=num(x.saved),pc=t?Math.min(100,Math.round(100*v/t)):0,lg=(x.log||[]).slice(-1)[0];return'<div class="mini"><div class="spread"><b>'+esc(x.name)+'</b><span class="pill">'+pc+'%</span></div><span class="small">'+cash(v)+' of '+cash(t)+(t>v?" · "+cash(t-v)+" to go":"")+(x.due?" · by "+esc(x.due):"")+'</span><div class="bar"><i style="width:'+pc+'%"></i></div>'+(lg?'<span class="small muted">Last added '+cash(num(lg.amount))+" on "+esc(lg.date)+(lg.byName?" by "+esc(lg.byName):"")+'</span>':"")+'<form class="add" data-form="hsadd" data-id="'+x.id+'"><input type="text" inputmode="decimal" id="hsa-'+x.id+'" class="keep" placeholder="Amount" aria-label="Amount to add" style="flex:1 1 90px"><button class="btn" type="submit">Add to it</button></form><button class="btn ghost" style="align-self:flex-start;padding:4px 10px;font-size:.8rem" data-act="del" data-coll="f_hsave" data-id="'+x.id+'">'+(ui.confirm==="f_hsave/"+x.id?"Confirm delete":"Delete")+'</button></div>'}).join("")+'</div>':'<div class="empty small">No shared savings yet. A trip, a new couch, a rainy day fund.</div>';
+  h+='<div class="card"><form class="add" data-form="hsave"><input type="text" id="hs-name" class="keep" placeholder="Saving for" aria-label="Saving for" style="flex:2 1 180px"><input type="text" inputmode="decimal" id="hs-target" class="keep" placeholder="Target" aria-label="Target" style="flex:1 1 110px"><input type="text" inputmode="decimal" id="hs-saved" class="keep" placeholder="Saved so far" aria-label="Saved so far" style="flex:1 1 110px"><input type="date" id="hs-due" class="keep" aria-label="By when" style="flex:1 1 140px"><button class="btn" type="submit">Add</button></form></div>';
+  return h;
+}
+function ordinal(n){var s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+var GST=[["idea","Idea"],["bought","Bought"],["wrapped","Wrapped"],["given","Given"]],GOCC=["Birthday","Christmas","Anniversary","Other"];
+function allGifts(){return list("f_gifts").concat(list("gifts").map(function(g){g.secret=true;return g}))}
+function giftBox(g){
+  var coll=g.secret?"gifts":"f_gifts";
+  return'<div class="mini fchore'+(g.status==="given"?" isdone":"")+'"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(g.idea)+'</b>'+(g.secret?'<span class="pill">Private</span>':"")+'</div><span class="small muted">'+esc(g.occasion||"Gift")+(g.year?" "+esc(g.year):"")+(g.price?" · "+cash(num(g.price)):"")+'</span>'+(g.where?'<span class="small" style="overflow-wrap:anywhere">'+(/^https?:\/\//.test(g.where)?'<a href="'+esc(g.where)+'" target="_blank" rel="noopener">Link</a>':esc(g.where))+'</span>':"")+'<div class="row"><select data-gst="'+g.id+'" data-coll="'+coll+'" aria-label="Gift status" style="flex:1 1 120px">'+GST.map(function(s){return'<option value="'+s[0]+'"'+((g.status||"idea")===s[0]?" selected":"")+'>'+s[1]+'</option>'}).join("")+'</select><button class="btn ghost" style="padding:4px 10px;font-size:.8rem" data-act="del" data-coll="'+coll+'" data-id="'+g.id+'">'+(ui.confirm===coll+"/"+g.id?"Confirm":"Delete")+'</button></div></div>';
+}
+function famGiftsView(){
+  var gs=allGifts(),f=ui.gf||"open",y=+today().slice(0,4);
+  var occ=[];famPeople().forEach(function(p){var nb=nextBday(p.birthday);if(nb&&daysTo(nb)<=120)occ.push({who:p.name,what:"Birthday",d:nb})});
+  var xm=y+"-12-25";if(xm<today())xm=(y+1)+"-12-25";if(daysTo(xm)<=120)occ.push({who:"",what:"Christmas",d:xm});
+  occ.sort(function(a,b){return a.d.localeCompare(b.d)});
+  var h=vh("Coming up","next four months");
+  h+=occ.length?'<div class="grid g3 fill">'+occ.map(function(o){var n=gs.filter(function(g){return g.status!=="given"&&(o.who?g.forName===o.who&&g.occasion==="Birthday":g.occasion==="Christmas")}).length;return'<div class="mini"><span class="small muted">'+esc(whenWord(o.d))+(daysTo(o.d)>6?" · in "+daysTo(o.d)+" days":"")+'</span><b>'+esc(o.who?o.who+"’s birthday":o.what)+'</b><span class="small">'+(n?n+" gift"+(n>1?"s":"")+" planned":"Nothing planned yet")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="gift-for" data-who="'+esc(o.who)+'" data-occ="'+o.what+'">Add an idea</button></div>'}).join("")+'</div>':'<div class="empty small">No birthdays in the next four months. Add birthdays on the People and pets tab.</div>';
+  h+=vh("Add a gift");
+  var dl='<datalist id="gift-people">'+famPeople().map(function(p){return'<option value="'+esc(p.name)+'">'}).join("")+'</datalist>';
+  h+='<div class="card"><form class="fform" data-form="gift"><div class="row fwrap"><div class="f"><label for="gf-for">For</label><input type="text" id="gf-for" class="keep" list="gift-people" placeholder="Name" value="'+esc(ui.gfFor||"")+'"></div><div class="f"><label for="gf-occ">Occasion</label><select id="gf-occ" class="keep">'+GOCC.map(function(o){return'<option'+(ui.gfOcc===o?" selected":"")+'>'+o+'</option>'}).join("")+'</select></div><div class="f" style="flex:2 1 220px"><label for="gf-idea">Gift</label><input type="text" id="gf-idea" class="keep" placeholder="What it is"></div></div><div class="row fwrap"><div class="f" style="flex:0 1 140px"><label for="gf-price">Price (optional)</label><input type="text" inputmode="decimal" id="gf-price" class="keep"></div><div class="f" style="flex:2 1 220px"><label for="gf-where">Where to get it or link</label><input type="text" inputmode="url" id="gf-where" class="keep"></div></div>'+dl+'<label class="gshare"><input type="checkbox" id="gf-secret"> Keep private <span class="small muted">· only you can see it, for gifts for each other</span></label><div class="row"><button class="btn primary" type="submit">Add gift</button></div></form></div>';
+  var shown=gs.filter(function(g){return f==="all"||(f==="given"?g.status==="given":g.status!=="given")});
+  h+=vh("Gift list",gs.filter(function(g){return g.status!=="given"}).length+" not given yet");
+  h+=tog("gf",[["open","Still to give"],["given","Given"],["all","All"]]);
+  var by={};shown.forEach(function(g){(by[g.forName||"Someone"]=by[g.forName||"Someone"]||[]).push(g)});
+  var names=Object.keys(by).sort();
+  h+=names.length?'<div class="cols">'+names.map(function(n){return'<div class="col"><div class="row"><h3>'+esc(n)+'</h3><span class="pill">'+by[n].length+'</span></div>'+by[n].sort(function(a,b){return(a.status==="given")-(b.status==="given")||(a.idea||"").localeCompare(b.idea||"")}).map(giftBox).join("")+'</div>'}).join("")+'</div>':'<div class="empty small">'+(gs.length?"Nothing here.":"No gifts yet. Jot ideas down whenever you hear one.")+'</div>';
+  return h;
+}
+function moneyClick(a,id,b){
+  if(a==="hm-mv"){var r=pd(hMonth()+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.hm=ymd(r).slice(0,7);render();return true}
+  if(a==="hm-now"){ui.hm=null;render();return true}
+  if(a==="gift-for"){ui.gfFor=b.getAttribute("data-who");ui.gfOcc=b.getAttribute("data-occ");render();var i=document.getElementById(ui.gfFor?"gf-idea":"gf-for");if(i){i.scrollIntoView({block:"center"});i.focus()}return true}
+  return false;
+}
+function moneySubmit(k,id,f){
+  var me=famMe(),mn=memName(me);
+  if(k==="hcat"){var n=val("hcn-name");if(!n)return true;write("f_hcats",newId(),{name:n,planned:val("hcn-amt"),created:today()});document.getElementById("hcn-name").value="";document.getElementById("hcn-amt").value="";return true}
+  if(k==="hbill"){var bn=val("hb-name");if(!bn)return true;var dy=Math.max(0,Math.min(31,parseInt(val("hb-day"),10)||0));write("f_hbills",newId(),{name:bn,amount:val("hb-amt"),day:dy||"",cat:val("hb-cat"),auto:document.getElementById("hb-auto").checked,paid:{},created:today()});["hb-name","hb-amt","hb-day"].forEach(function(x){document.getElementById(x).value=""});return true}
+  if(k==="hmoney"){var am=val("hm-amt");if(!num(am)){ui.err="Add an amount.";render();return true}var d=val("hm-date")||today();savedNote(write("f_hmoney",newId(),{kind:val("hm-kind")||"out",date:d,amount:am,cat:val("hm-cat"),what:val("hm-what"),by:me,byName:mn}));document.getElementById("hm-amt").value="";document.getElementById("hm-what").value="";return true}
+  if(k==="hsave"){var sn=val("hs-name");if(!sn)return true;write("f_hsave",newId(),{name:sn,target:val("hs-target"),saved:val("hs-saved")||"0",due:val("hs-due"),log:[],created:today()});["hs-name","hs-target","hs-saved","hs-due"].forEach(function(x){document.getElementById(x).value=""});return true}
+  if(k==="hsadd"){var x=S.f_hsave[id],ad=num(val("hsa-"+id));if(!x||!ad)return true;x=clone(x);x.saved=String(Math.round((num(x.saved)+ad)*100)/100);(x.log=x.log||[]).push({date:today(),amount:ad,by:me,byName:mn});x.log=x.log.slice(-50);write("f_hsave",id,x).then(function(ok){if(ok)flash("Added "+cash(ad)+".")});return true}
+  if(k==="gift"){var idea=val("gf-idea");if(!idea){ui.err="Write what the gift is.";render();return true}var wh=val("gf-where");if(wh&&/^[a-z0-9-]+\.[a-z]{2,}/i.test(wh)&&!/\s/.test(wh))wh="https://"+wh;
+    var sec=document.getElementById("gf-secret").checked,occ2=val("gf-occ")||"Birthday",fy=+today().slice(0,4);
+    var g={forName:val("gf-for"),occasion:occ2,idea:idea,price:val("gf-price"),where:wh,status:"idea",year:occ2==="Christmas"&&today().slice(5)>"12-25"?fy+1:fy,by:me,byName:mn,created:today()};
+    savedNote(write(sec?"gifts":"f_gifts",newId(),g));ui.gfFor="";ui.gfOcc="";["gf-idea","gf-price","gf-where"].forEach(function(x2){document.getElementById(x2).value=""});return true}
+  return false;
+}
+function moneyChange(e){
+  if(e.hasAttribute("data-hcat")){var c=S.f_hcats[e.getAttribute("data-hcat")];if(!c)return true;c=clone(c);c.planned=e.value.trim();savedNote(write("f_hcats",e.getAttribute("data-hcat"),c));return true}
+  if(e.hasAttribute("data-hbpaid")){var bid=e.getAttribute("data-hbpaid"),b=S.f_hbills[bid],m=hMonth();if(!b)return true;b=clone(b);b.paid=b.paid||{};var eid="bill-"+bid+"-"+m;
+    if(e.checked){b.paid[m]={date:today(),by:famMe(),byName:memName(famMe())};write("f_hbills",bid,b);var d=m===today().slice(0,7)?today():m+"-"+pad2(Math.min(28,+b.day||1));write("f_hmoney",eid,{kind:"out",date:d,amount:b.amount,cat:b.cat||"",what:b.name+" (bill)",bill:bid,by:famMe(),byName:memName(famMe())})}
+    else{delete b.paid[m];write("f_hbills",bid,b);if(S.f_hmoney[eid])fdb.collection("f_hmoney").doc(eid).delete().catch(function(){})}return true}
+  if(e.hasAttribute("data-gst")){var coll=e.getAttribute("data-coll"),gid=e.getAttribute("data-gst"),g=S[coll]&&S[coll][gid];if(!g)return true;g=clone(g);delete g.secret;g.status=e.value;savedNote(write(coll,gid,g));return true}
+  return false;
+}
 /* ---------- tour ---------- */
 var TOUR=[
  ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. The Family page is the one place you share. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
@@ -2283,14 +2366,14 @@ var TOUR=[
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
  ["log","Journal","One card per day. Press Add entry, write what happened and how you felt. Claude can read your entries and point out patterns over time, such as what drains you or what keeps you on track. Entries are private."],
- ["family","Family","The shared page. Overview shows the next two weeks, how the chores and home jobs are going, habit consistency and shared goals. Goals holds the goals you work on together: each step has an owner, and you can see everyone’s open steps at a glance. Chores holds the jobs that repeat (who does them, how often) and one-off to-dos. Home upkeep tracks jobs that come round every few months or once a year, like the furnace filter or winter tires, and works out when each is next due. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
+ ["family","Family","The shared page. Overview shows the next two weeks, how the chores and home jobs are going, habit consistency and shared goals. Goals holds the goals you work on together: each step has an owner, and you can see everyone’s open steps at a glance. Chores holds the jobs that repeat (who does them, how often) and one-off to-dos. Home upkeep tracks jobs that come round every few months or once a year, like the furnace filter or winter tires, and works out when each is next due. Money is the shared household budget: categories, monthly bills you tick off when paid, money in and out, and savings you build together. Gifts keeps gift ideas for birthdays and Christmas; tick Keep private for a gift for each other. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
  ["areas","Explore","Ideas for what to work on. Life is split into areas such as money, health, home and career. Pick up to three focus areas, browse the goal ideas inside each one, and add the ones you like as goals."],
  ["goals","Goals","Every goal has a target, a date, steps and milestones, and a result number you record over time. Flags tell you when a goal needs something, such as a date or a scheduled next step. To show a goal on the Family page, open it and tick Show to family; otherwise it stays private."],
  ["fit","Fitness","Training: build workouts and schedule them over weeks. Check-ins: record weight, measurements and photos to see progress. Nutrition: daily meals and macro targets. Fitness goals sit in their own tab."],
  ["study","Learning","Courses you are taking, with a card for each module’s notes. Schedule study sessions into the Planner, and ask Claude questions about what you are learning."],
  ["biz","Business","Clients, leads, projects and invoices, for anyone running their own work or a side business. Skip it if it does not apply to you."],
  ["social","Social","Social media accounts, with a place to keep each platform’s documents and plans. Optional, like Business."],
- ["money","Money","Your personal budget, spending, savings and accounts. It only records and adds up what you enter; it does not give advice. It is private to you. Shared household money arrives on the Family page in a later update."],
+ ["money","Money","Your personal budget, spending, savings and accounts. It only records and adds up what you enter; it does not give advice. It is private to you. The shared household budget is on the Family page under Money."],
  ["claude","Claude","Ask Claude for a weekly review of your hub: what moved, what slipped and what to focus on. This page also tracks the skills you are building with Claude."],
  ["learn","Library","Saved links, courses, guides and reference material, each with a simple path: read it, use it, turn it into a habit or skill."],
  ["find","Search","Search everything in your hub at once: goals, tasks, notes, journal entries, clients and more."],

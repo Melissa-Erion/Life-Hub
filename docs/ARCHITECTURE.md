@@ -89,3 +89,18 @@ There is also a scheduled weekly mentor review that runs in claude.ai (Fridays, 
 ## Not built yet
 
 Import from backup, cleanup of uploaded files when a record is deleted, social posts appearing in the Planner by date, Google Calendar sync (Melissa said no to this one for now).
+
+## Family space
+
+Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached through `window.claude.use("family")` (see `app/runtime.js`). In the app, any collection whose name starts with `f_` is routed to the family store by `storeFor()`; `write()` and `remove()` work the same for both, and deleted family records go to `f_trash`.
+
+| Collection | Shape |
+|---|---|
+| `f_people` | `{name, kind:"person"|"pet", role, birthday, order, ...profile fields}` (fields in `PFIELDS`) |
+| `f_events` | `{title, date, time, end, where, notes, who:[personId], yearly, by}`; birthdays come from `f_people` |
+| `f_habits` | `{name, per, owner:user_id, days:{date:1}}`; only the owner can tick |
+| `f_feedback` | `{kind:"bug"|"idea", page, text, by, byName, date, at, status, reply, device, width}`; the space owner sets status and reply |
+
+Personal goals with `shared:true` are readable by family members (RLS policy on `docs`) and appear in `S.pgoals`.
+
+Pages: `#family` (tabs Overview, Habits, Calendar, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.

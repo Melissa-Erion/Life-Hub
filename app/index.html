@@ -650,6 +650,10 @@ span.dot{display:inline-block;cursor:default}
 .navfix{}
 .fsched input{width:100%;min-width:90px;padding:6px 8px;font-size:.88rem;height:34px}
 .fsched td{padding:4px}
+.invnum{display:flex;flex-direction:column;gap:2px}.invnum b{font-family:var(--display);font-size:1.4rem;font-weight:900;letter-spacing:-.02em}
+.invg{font-weight:700}.invg.down{color:var(--signal)}
+.mixrow{display:flex;flex-direction:column;gap:6px;padding:6px 0}
+.invbox form.add{gap:6px}.invbox form.add .btn{padding:6px 12px;font-size:.82rem}
 /* Month and week headers: arrows as round buttons, and on phones the title gets its own line */
 .calhead .row{flex-wrap:nowrap;gap:6px}
 .calhead .btn.ghost[data-n]{width:38px;height:38px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;background:var(--surface);font-size:1rem;line-height:1}
@@ -752,10 +756,10 @@ nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
 /* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
-var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals","f_hcats","f_hbills","f_hmoney","f_hsave","f_gifts","f_items","f_lists","f_trips","f_checkins"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
+var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals","f_hcats","f_hbills","f_hmoney","f_hsave","f_gifts","f_items","f_lists","f_trips","f_checkins","f_invest","f_invlog","f_watch"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
 function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
-var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses","gifts"];
+var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses","gifts","invest","invlog","watch"];
 var view=document.getElementById("view");
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -958,7 +962,7 @@ function vh(t,sub){return '<div class="vh"><h2>'+t+'</h2>'+(sub?'<span>'+esc(sub
 var LABEL={courses:"Course",goals:"Goal",tasks:"Task",clients:"Client",projects:"Project",journal:"Journal",log:"Note",resources:"Resource",routines:"Workout",workouts:"Session",money:"Money entry",subs:"Subscription",habits:"Habit",skills:"Skill",improve:"Improvement",checkins:"Check-in",acts:"Activity",trackers:"Number",invoices:"Invoice",pmoney:"Spending",savings:"Savings goal",accounts:"Account",briefs:"Brief",meals:"Meals",plans:"Plan",paths:"Pathway"};
 function nameOf(coll,d){return d.title||d.name||d.text||d.what||d.note||d.date||"item"}
 function vMoney(){
-  var td=today(),mo=td.slice(0,7),h='<div class="head"><h1>Money</h1><p class="muted">Your personal budget, savings and net worth. The hub records and totals what you enter. It does not give financial advice.</p></div>'+tog("mon",[["budget","Budget"],["savings","Savings"],["worth","Net worth"],["goals","Goals"]])+vh({budget:"Monthly budget",savings:"Savings goals",worth:"Net worth",goals:"Money goals"}[ui.mon]||"Monthly budget",ui.mon==="budget"?fmt(td,{month:"long",year:"numeric"}):"");
+  var td=today(),mo=td.slice(0,7),h='<div class="head"><h1>Money</h1><p class="muted">Your personal budget, savings, investments and net worth. The hub records and totals what you enter. It does not give financial advice.</p></div>'+tog("mon",[["budget","Budget"],["savings","Savings"],["invest","Investing"],["worth","Net worth"],["goals","Goals"]])+vh({budget:"Monthly budget",savings:"Savings goals",invest:"Investing",worth:"Net worth",goals:"Money goals"}[ui.mon]||"Monthly budget",ui.mon==="budget"?fmt(td,{month:"long",year:"numeric"}):"");
   if(ui.mon==="budget"){
     var cats=(pdoc("budget").cats||[]),pm=list("pmoney").filter(function(x){return(x.date||"").slice(0,7)===mo}),inc=pm.filter(function(x){return x.kind==="income"}).reduce(function(a,x){return a+num(x.amount)},0),sp=pm.filter(function(x){return x.kind!=="income"}).reduce(function(a,x){return a+num(x.amount)},0),planned=cats.reduce(function(a,c){return a+num(c.amt)},0);
     h+='<div class="grid g4"><div class="tile"><b>'+cash(inc)+'</b><span>income this month</span></div><div class="tile"><b>'+cash(sp)+'</b><span>spent this month</span></div><div class="tile"><b>'+cash(inc-sp)+'</b><span>income minus spending</span></div><div class="tile"><b>'+cash(planned)+'</b><span>planned spending</span></div></div>';
@@ -975,6 +979,7 @@ function vMoney(){
     h+='<div class="grid g4"><div class="tile"><b>'+cash(tot)+'</b><span>saved across all goals</span></div><div class="tile"><b>'+sv.length+'</b><span>savings goals</span></div></div>';
     h+='<div class="card"><h2>Add a savings goal</h2><form class="add" data-form="saving"><div class="f"><label for="sg-name">What for</label><input type="text" id="sg-name" class="keep"></div><div class="f" style="flex:0 1 140px"><label for="sg-target">Target</label><input type="text" inputmode="decimal" id="sg-target" class="keep"></div><div class="f" style="flex:0 1 140px"><label for="sg-saved">Saved so far</label><input type="text" inputmode="decimal" id="sg-saved" class="keep"></div><div class="f" style="flex:0 1 160px"><label for="sg-by">By when</label><input type="date" id="sg-by" class="keep"></div><button class="btn primary" type="submit">Add</button></form></div>';
     if(sv.length){h+='<div class="grid g2">';sv.forEach(function(x){var t=num(x.target),v=num(x.saved),pc=t?Math.min(100,Math.round(100*v/t)):0;h+='<div class="card"><div class="spread"><h3>'+esc(x.name)+'</h3><button class="btn ghost" data-act="del" data-coll="savings" data-id="'+x.id+'">'+(ui.confirm==="savings/"+x.id?"Confirm":"Remove")+'</button></div><div class="tile" style="border:0;padding:0"><b>'+pc+'%</b><span>'+cash(v)+' of '+cash(t)+(x.by?" · by "+esc(x.by):"")+(t>v?" · "+cash(t-v)+" to go":"")+'</span></div><div class="bar"><i style="width:'+pc+'%"></i></div><div class="row"><div class="f"><label for="sgs-'+x.id+'">Saved so far</label><input type="text" inputmode="decimal" id="sgs-'+x.id+'" data-doc="savings/'+x.id+'" data-f="saved" value="'+esc(x.saved||"")+'"></div><div class="f"><label for="sgt-'+x.id+'">Target</label><input type="text" inputmode="decimal" id="sgt-'+x.id+'" data-doc="savings/'+x.id+'" data-f="target" value="'+esc(x.target||"")+'"></div></div></div>'});h+='</div>'}
+  }else if(ui.mon==="invest"){h+=invHtml(PCFG);
   }else if(ui.mon==="worth"){
     var ac=list("accounts").sort(function(a,b){return a.name.localeCompare(b.name)}),as=ac.filter(function(x){return x.kind!=="debt"}).reduce(function(a,x){return a+num(x.balance)},0),de=ac.filter(function(x){return x.kind==="debt"}).reduce(function(a,x){return a+num(x.balance)},0),pts=(pdoc("networth").pts||[]);
     h+='<div class="grid g4"><div class="tile"><b>'+cash(as)+'</b><span>what you own</span></div><div class="tile"><b>'+cash(de)+'</b><span>what you owe</span></div><div class="tile"><b>'+cash(as-de)+'</b><span>net worth</span></div></div>';
@@ -2362,10 +2367,79 @@ function goalsChange(e){
   if(e.hasAttribute("data-fgwho")){var wid=e.getAttribute("data-id"),wi=+e.getAttribute("data-fgwho"),wv=e.value;savedNote(fgSave(wid,function(g){if(g.steps&&g.steps[wi])g.steps[wi].who=wv}));return true}
   return false;
 }
+/* ---------- investing (personal Money tab and Family money) ---------- */
+var IKIND=["Crypto","Stocks","ETFs or index funds","Bonds or GICs","Real estate","Cash","Other"],IACCT=["TFSA","RRSP","FHSA","RESP","Non-registered","Crypto wallet or exchange","Pension","Other"];
+var PCFG={h:"invest",l:"invlog",w:"watch",p:"pi",fam:false},FCFG={h:"f_invest",l:"f_invlog",w:"f_watch",p:"fi",fam:true};
+function invCfg(k){return k==="fi"?FCFG:PCFG}
+function invGain(x){var c=num(x.invested),v=num(x.value);return{c:c,v:v,g:v-c,pc:c?Math.round(1000*(v-c)/c)/10:null}}
+function gainTxt(g,pc){if(!g)return"No change";return(g>0?"Up ":"Down ")+cash(Math.abs(g))+(pc!=null?" ("+Math.abs(pc)+"%)":"")}
+function invTrend(hs){var dates={};hs.forEach(function(x){(x.hist||[]).forEach(function(p){dates[p.d]=1})});var ds=Object.keys(dates).sort();if(ds.length<2)return[];return ds.map(function(d){var t=0;hs.forEach(function(x){var last=null;(x.hist||[]).forEach(function(p){if(p.d<=d)last=p.v});if(last!=null)t+=num(last)});return{d:d,v:Math.round(t*100)/100}})}
+function invForm(cfg,x){
+  var p=cfg.p+(x?"e-":"n-"),o=x||{kind:"Crypto",acct:"Crypto wallet or exchange"};
+  var sel=function(id,arr,v){return'<select id="'+p+id+'" class="keep">'+arr.map(function(a){return"<option"+(a===v?" selected":"")+">"+a+"</option>"}).join("")+"</select>"};
+  var h='<form class="fform" data-form="inv" data-cfg="'+cfg.p+'"'+(x?' data-id="'+x.id+'"':"")+'><div class="row fwrap"><div class="f" style="flex:2 1 200px"><label for="'+p+'name">Name</label><input type="text" id="'+p+'name" class="keep" value="'+esc(o.name||"")+'" placeholder="Bitcoin, S&amp;P 500 ETF, GIC"></div><div class="f" style="flex:0 1 120px"><label for="'+p+'sym">Symbol (optional)</label><input type="text" id="'+p+'sym" class="keep" value="'+esc(o.sym||"")+'" placeholder="BTC, VFV"></div><div class="f" style="flex:0 1 130px"><label for="'+p+'qty">How many (optional)</label><input type="text" inputmode="decimal" id="'+p+'qty" class="keep" value="'+esc(o.qty||"")+'" placeholder="0.05"></div></div>';
+  h+='<div class="row fwrap"><div class="f"><label for="'+p+'kind">What it is</label>'+sel("kind",IKIND,o.kind)+'</div><div class="f"><label for="'+p+'acct">Account</label>'+sel("acct",IACCT,o.acct)+'</div><div class="f"><label for="'+p+'where">Where it is held</label><input type="text" id="'+p+'where" class="keep" value="'+esc(o.where||"")+'" placeholder="Wealthsimple, Coinbase, bank"></div>'+(cfg.fam?'<div class="f"><label for="'+p+'own">Whose</label><select id="'+p+'own" class="keep">'+pOpts(o.own,"Joint")+'</select></div>':"")+'</div>';
+  h+='<div class="row fwrap"><div class="f" style="flex:1 1 150px"><label for="'+p+'inv">Total put in so far</label><input type="text" inputmode="decimal" id="'+p+'inv" class="keep" value="'+esc(o.invested||"")+'" placeholder="0.00"></div><div class="f" style="flex:1 1 150px"><label for="'+p+'val">Worth now</label><input type="text" inputmode="decimal" id="'+p+'val" class="keep" value="'+esc(o.value||"")+'" placeholder="0.00"></div></div>';
+  h+='<div class="f"><label for="'+p+'notes">Notes</label><textarea id="'+p+'notes" class="keep" rows="2" placeholder="Why you bought it, plan, anything to remember">'+esc(o.notes||"")+'</textarea></div>';
+  h+='<div class="row"><button class="btn primary" type="submit">'+(x?"Save changes":"Add investment")+'</button>'+(x?'<button class="btn ghost" type="button" data-act="inv-cancel">Cancel</button><button class="btn danger" type="button" data-act="del" data-coll="'+cfg.h+'" data-id="'+x.id+'">'+(ui.confirm===cfg.h+"/"+x.id?"Confirm delete":"Delete")+'</button>':"")+'</div></form>';
+  return h;
+}
+function invBox(cfg,x){
+  if(ui.invEdit===cfg.h+"/"+x.id)return'<div class="mini" id="inv-'+x.id+'">'+invForm(cfg,x)+'</div>';
+  var g=invGain(x),pts=(x.hist||[]).map(function(p){return{v:p.v}});
+  return'<div class="mini invbox" id="inv-'+x.id+'"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(x.name)+(x.sym?' <span class="small muted">'+esc(x.sym)+'</span>':"")+'</b><span class="pill">'+esc(x.kind||"Other")+'</span></div><span class="small muted">'+esc([x.acct,x.where,cfg.fam?(pName(x.own)||"Joint"):""].filter(Boolean).join(" · "))+'</span><div class="invnum"><b>'+cash(g.v)+'</b><span class="small">'+(x.qty?esc(x.qty)+" "+esc(x.sym||"")+" · ":"")+'put in '+cash(g.c)+'</span></div><span class="small invg'+(g.g>0?" up":g.g<0?" down":"")+'">'+gainTxt(g.g,g.pc)+'</span>'+(pts.length>1?spark(pts):"")+'<span class="small muted">Value updated '+esc(x.updated||"–")+'</span><form class="add" data-form="invval" data-cfg="'+cfg.p+'" data-id="'+x.id+'"><input type="text" inputmode="decimal" id="iv-'+x.id+'" class="keep" placeholder="Worth today" aria-label="Value today for '+esc(x.name)+'" style="flex:1 1 100px"><button class="btn" type="submit">Update</button></form><form class="add" data-form="invadd" data-cfg="'+cfg.p+'" data-id="'+x.id+'"><input type="text" inputmode="decimal" id="ia-'+x.id+'" class="keep" placeholder="Money added" aria-label="Money added to '+esc(x.name)+'" style="flex:1 1 100px"><button class="btn" type="submit">Add money</button></form>'+(x.notes?'<p class="small fnotes muted">'+esc(x.notes)+'</p>':"")+'<button class="btn ghost" style="align-self:flex-start;padding:4px 10px;font-size:.8rem" data-act="inv-edit" data-coll="'+cfg.h+'" data-id="'+x.id+'">Edit details</button></div>';
+}
+function invHtml(cfg){
+  var hs=list(cfg.h).sort(function(a,b){return num(b.value)-num(a.value)}),T=hs.reduce(function(a,x){var g=invGain(x);a.c+=g.c;a.v+=g.v;return a},{c:0,v:0}),gg=T.v-T.c,pc=T.c?Math.round(1000*gg/T.c)/10:null;
+  var h='<p class="small muted">'+(cfg.fam?"Investments you share or want each other to see. ":"Your own investments, private to you. ")+'Enter what you put in and what each is worth; the hub adds it up and shows the change. It records only and does not give financial advice. Values do not update by themselves: update them when you check your accounts.</p>';
+  h+='<div class="grid g4"><div class="tile"><b>'+cash(T.v)+'</b><span>worth now</span></div><div class="tile"><b>'+cash(T.c)+'</b><span>put in</span></div><div class="tile"><b>'+(gg>=0?"+":"−")+cash(Math.abs(gg))+'</b><span>'+(pc!=null?(gg>=0?"up ":"down ")+Math.abs(pc)+"%":"change")+'</span></div><div class="tile"><b>'+hs.length+'</b><span>investments</span></div></div>';
+  var tr=invTrend(hs);if(tr.length>1)h+='<div class="card"><div class="spread"><h3 style="margin:0">Total over time</h3><span class="small muted">'+esc(tr[0].d)+' to '+esc(tr[tr.length-1].d)+'</span></div>'+spark(tr)+'</div>';
+  if(hs.length){var by={};hs.forEach(function(x){by[x.kind||"Other"]=(by[x.kind||"Other"]||0)+num(x.value)});var ks=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
+    h+=vh("Mix","by type");h+='<div class="card">'+ks.map(function(k){var p=T.v?Math.round(100*by[k]/T.v):0;return'<div class="mixrow"><div class="spread"><span class="small"><b>'+esc(k)+'</b></span><span class="small">'+cash(by[k])+' · '+p+'%</span></div><div class="bar"><i style="width:'+p+'%"></i></div></div>'}).join("")+'</div>'}
+  h+=vh("Investments",hs.length+" tracked");
+  h+=hs.length?'<div class="grid g3 fill2">'+hs.map(function(x){return invBox(cfg,x)}).join("")+'</div>':'<div class="empty small">Nothing yet. Add the first one below: a crypto coin, an ETF, a TFSA, anything.</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Add an investment</h3>'+invForm(cfg,null)+'</div>';
+  var lg=list(cfg.l).sort(function(a,b){return(b.date+(b.at||"")).localeCompare(a.date+(a.at||""))}).slice(0,25);
+  h+=vh("Money added",lg.length?"latest "+lg.length:"");
+  h+=lg.length?'<div class="card"><div class="tablewrap"><table class="ctab"><thead><tr><th>Date</th><th>Investment</th>'+(cfg.fam?"<th>By</th>":"")+'<th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+lg.map(function(e){var hx=S[cfg.h][e.hold];return'<tr><td>'+esc(e.date)+'</td><td style="white-space:normal">'+esc(hx?hx.name:(e.name||"Removed"))+'</td>'+(cfg.fam?"<td>"+esc(e.byName||"")+"</td>":"")+'<td style="text-align:right"><b>'+cash(num(e.amount))+'</b></td><td style="text-align:right"><button class="btn ghost" aria-label="Remove entry" data-act="del" data-coll="'+cfg.l+'" data-id="'+e.id+'">'+(ui.confirm===cfg.l+"/"+e.id?"Confirm":"×")+'</button></td></tr>'}).join("")+'</tbody></table></div><p class="small muted">Removing an entry here does not change the investment’s totals.</p></div>':'<div class="empty small">Use Add money on an investment to keep a record of each time you put money in.</div>';
+  var ws=list(cfg.w).sort(function(a,b){return(a.name||"").localeCompare(b.name||"")});
+  h+=vh("Watchlist",ws.length?ws.length+" watching":"learning and maybe later");
+  h+='<p class="small muted">Things you are learning about or thinking about. Nothing here counts in the totals.</p>';
+  if(ws.length)h+='<div class="grid g3 fill">'+ws.map(function(x){return'<div class="mini"><div class="spread"><b>'+esc(x.name)+(x.sym?' <span class="small muted">'+esc(x.sym)+'</span>':"")+'</b><button class="btn ghost" style="padding:2px 8px;font-size:.8rem" data-act="del" data-coll="'+cfg.w+'" data-id="'+x.id+'">'+(ui.confirm===cfg.w+"/"+x.id?"Confirm":"Remove")+'</button></div>'+(x.why?'<span class="small">'+esc(x.why)+'</span>':"")+(x.link?'<a class="small" href="'+esc(x.link)+'" target="_blank" rel="noopener">Link</a>':"")+'<span class="small muted">Added '+esc(x.date||"")+(x.byName?" by "+esc(x.byName):"")+'</span></div>'}).join("")+'</div>';
+  h+='<div class="card"><form class="add" data-form="invwatch" data-cfg="'+cfg.p+'"><div class="f" style="flex:2 1 160px"><label for="'+cfg.p+'w-name">Name</label><input type="text" id="'+cfg.p+'w-name" class="keep" placeholder="Ethereum, a company"></div><div class="f" style="flex:0 1 110px"><label for="'+cfg.p+'w-sym">Symbol</label><input type="text" id="'+cfg.p+'w-sym" class="keep" placeholder="ETH"></div><div class="f" style="flex:3 1 220px"><label for="'+cfg.p+'w-why">Why you are watching it</label><input type="text" id="'+cfg.p+'w-why" class="keep"></div><div class="f" style="flex:2 1 180px"><label for="'+cfg.p+'w-link">Link (optional)</label><input type="text" inputmode="url" id="'+cfg.p+'w-link" class="keep"></div><button class="btn" type="submit">Add to watchlist</button></form></div>';
+  return h;
+}
+function invClick(a,id,b){
+  if(a==="inv-edit"){ui.invEdit=b.getAttribute("data-coll")+"/"+id;render();return true}
+  if(a==="inv-cancel"){ui.invEdit=null;render();return true}
+  return false;
+}
+function invSubmit(k,id,f){
+  if(["inv","invval","invadd","invwatch"].indexOf(k)<0)return false;
+  var cfg=invCfg(f.getAttribute("data-cfg")),me=cfg.fam?famMe():"",mn=cfg.fam?memName(famMe()):"";
+  if(cfg.fam&&!fdb){ui.err="The family space is not available.";render();return true}
+  if(k==="inv"){var p=cfg.p+(id?"e-":"n-"),n=val(p+"name");if(!n){ui.err="Give the investment a name.";render();return true}
+    var x=id&&S[cfg.h][id]?clone(S[cfg.h][id]):{hist:[],created:today(),by:me};var v=val(p+"val");
+    Object.assign(x,{name:n,sym:val(p+"sym").toUpperCase(),qty:val(p+"qty"),kind:val(p+"kind"),acct:val(p+"acct"),where:val(p+"where"),invested:val(p+"inv"),notes:val(p+"notes")});if(cfg.fam)x.own=val(p+"own");
+    if(v!==""&&num(v)!==num(x.value)){x.value=v;x.updated=today();x.hist=(x.hist||[]).filter(function(q){return q.d!==today()});x.hist.push({d:today(),v:num(v)})}else if(x.value==null)x.value=v;
+    ui.invEdit=null;savedNote(write(cfg.h,id||newId(),x));if(!id)["name","sym","qty","where","inv","val","notes"].forEach(function(s){var e=document.getElementById(p+s);if(e)e.value=""});render();return true}
+  if(k==="invval"){var x2=S[cfg.h][id],nv=val("iv-"+id);if(!x2||nv==="")return true;x2=clone(x2);x2.value=String(num(nv));x2.updated=today();x2.hist=(x2.hist||[]).filter(function(q){return q.d!==today()});x2.hist.push({d:today(),v:num(nv)});x2.hist=x2.hist.slice(-120);write(cfg.h,id,x2).then(function(ok){if(ok)flash("Value updated.")});return true}
+  if(k==="invadd"){var x3=S[cfg.h][id],am=num(val("ia-"+id));if(!x3||!am)return true;x3=clone(x3);x3.invested=String(Math.round((num(x3.invested)+am)*100)/100);x3.value=String(Math.round((num(x3.value)+am)*100)/100);x3.updated=today();x3.hist=(x3.hist||[]).filter(function(q){return q.d!==today()});x3.hist.push({d:today(),v:num(x3.value)});
+    writeSeq([[cfg.h,id,x3],[cfg.l,newId(),{hold:id,name:x3.name,amount:am,date:today(),at:new Date().toISOString(),by:me,byName:mn}]]).then(function(){flash("Added "+cash(am)+" to "+x3.name+".")});return true}
+  if(k==="invwatch"){var wn=val(cfg.p+"w-name");if(!wn)return true;var lk=val(cfg.p+"w-link");if(lk&&!/^https?:\/\//i.test(lk))lk="https://"+lk;
+    write(cfg.w,newId(),{name:wn,sym:val(cfg.p+"w-sym").toUpperCase(),why:val(cfg.p+"w-why"),link:lk,date:today(),by:me,byName:mn});["w-name","w-sym","w-why","w-link"].forEach(function(s){var e=document.getElementById(cfg.p+s);if(e)e.value=""});return true}
+  return true;
+}
 /* ---------- family money and gifts ---------- */
 function hMonth(){return ui.hm||today().slice(0,7)}
 function hEntries(m){return list("f_hmoney").filter(function(x){return(x.date||"").slice(0,7)===m})}
 function famMoneyView(){
+  if(!ui.hmt)ui.hmt="budget";
+  var top=tog("hmt",[["budget","Budget and bills"],["invest","Investing"]]);
+  if(ui.hmt==="invest")return top+vh("Investing","shared with the family")+invHtml(FCFG);
+  return top+famMoneyBudget();
+}
+function famMoneyBudget(){
   var m=hMonth(),en=hEntries(m),inc=en.filter(function(x){return x.kind==="in"}).reduce(function(a,x){return a+num(x.amount)},0),out=en.filter(function(x){return x.kind!=="in"}).reduce(function(a,x){return a+num(x.amount)},0);
   var cats=list("f_hcats").sort(function(a,b){return a.name.localeCompare(b.name)}),planned=cats.reduce(function(a,c){return a+num(c.planned)},0);
   var h='<div class="calhead" style="margin-top:6px"><h2>'+esc(pd(m+"-01").toLocaleDateString("en-CA",{month:"long",year:"numeric"}))+'</h2><div class="row"><button class="btn ghost" data-act="hm-mv" data-n="-1" aria-label="Previous month">←</button><button class="btn" data-act="hm-now">This month</button><button class="btn ghost" data-act="hm-mv" data-n="1" aria-label="Next month">→</button></div></div>';
@@ -2734,7 +2808,7 @@ var TOUR=[
  ["study","Learning","Courses you are taking, with a card for each module’s notes. Schedule study sessions into the Planner, and ask Claude questions about what you are learning."],
  ["biz","Business","Clients, leads, projects and invoices, for anyone running their own work or a side business. Skip it if it does not apply to you."],
  ["social","Social","Social media accounts, with a place to keep each platform’s documents and plans. Optional, like Business."],
- ["money","Money","Your personal budget, spending, savings and accounts. It only records and adds up what you enter; it does not give advice. It is private to you. The shared household budget is on the Family page under Money."],
+ ["money","Money","Your personal budget, spending, savings, investments and accounts. It only records and adds up what you enter; it does not give advice. It is private to you. The shared household budget is on the Family page under Money."],
  ["claude","Claude","Ask Claude for a weekly review of your hub: what moved, what slipped and what to focus on. This page also tracks the skills you are building with Claude."],
  ["learn","Library","Saved links, courses, guides and reference material, each with a simple path: read it, use it, turn it into a habit or skill."],
  ["find","Search","Search everything in your hub at once: goals, tasks, notes, journal entries, clients and more."],
@@ -2791,6 +2865,7 @@ function saveGoal(id,g){g.updated=today();return write("goals",id,g)}
 
 view.addEventListener("submit",function(ev){
   ev.preventDefault();var f=ev.target,k=f.getAttribute("data-form"),id=f.getAttribute("data-id");
+  if(invSubmit(k,id,f))return;
   if(famSubmit(k,id,f))return;
   if(k==="goal"){var t=val("ng-title");if(!t)return;write("goals",newId(),{title:t,area:val("ng-area"),sub:val("ng-sub"),target:val("ng-target"),due:val("ng-due"),why:"",status:"active",milestones:[],steps:[],created:today(),updated:today()});["ng-title","ng-target","ng-due"].forEach(function(i){document.getElementById(i).value=""})}
   else if(k==="link"){var lc=f.getAttribute("data-coll"),lu=val("lk-u"),lt=val("lk-t");if(!lu||!S[lc]||!S[lc][id])return;if(!/^https?:\/\//i.test(lu))lu="https://"+lu;if(/[\s"<>]/.test(lu)){ui.err="That does not look like a web address.";render();return}var lr=clone(S[lc][id]);(lr.links=lr.links||[]).push({t:lt,u:lu,date:today()});document.getElementById("lk-u").value="";document.getElementById("lk-t").value="";write(lc,id,lr)}
@@ -2909,6 +2984,7 @@ view.addEventListener("click",function(ev){
   if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="mod-rm"||b.getAttribute("data-act")==="cn-del"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"||b.getAttribute("data-act")==="fi-clear"||b.getAttribute("data-act")==="pt-rm"||b.getAttribute("data-act")==="pd-rm"||b.getAttribute("data-act")==="ft-del"))){ui.confirm=null;if(!b){render();return}}
   if(!b)return;
   var a=b.getAttribute("data-act"),id=b.getAttribute("data-id");
+  if(invClick(a,id,b))return;
   if(famClick(a,id,b))return;
   if(a==="back"){var pv=ui.prev;ui.prev=null;ui.skipPrev=true;location.hash="#"+(pv||"today");return}
   if(a==="pl-mode"){var cp=ui.pl||{ref:today()};ui.pl={mode:b.getAttribute("data-mode"),ref:cp.ref};render();return}

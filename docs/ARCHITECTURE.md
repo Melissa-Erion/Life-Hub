@@ -119,3 +119,11 @@ Personal goals with `shared:true` are readable by family members (RLS policy on 
 Pages: `#family` (tabs Overview, Check-in, Calendar, Lists, Goals, Chores, Home upkeep, Money, Gifts, Trips, Habits, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.
 
 Family files are uploaded with `family.upload(file)` to Storage at `files/family/<space_id>/<id>`. Storage policies let any member of that space read, add and delete there (`private.member_of_text`). The service worker serves them at `_blob/fam/<space_id>/<id>`.
+
+## Investing
+
+Personal (Money page, Investing tab) and family (Family, Money, Investing) share one renderer, `invHtml(cfg)`, with `PCFG` (`invest`, `invlog`, `watch`) or `FCFG` (`f_invest`, `f_invlog`, `f_watch`).
+
+- Investment: `{name, sym, qty, kind, acct, where, own (family only, person id or "" for joint), invested, value, updated, hist:[{d,v}], notes}`. "Update" sets the value and adds a history point for today; "Add money" raises both invested and value and logs it.
+- Log: `{hold, name, amount, date, at, by, byName}`. Watchlist: `{name, sym, why, link, date, by, byName}`.
+- The trend line is built from each investment's history (`invTrend`). Values are entered by hand; nothing is fetched. It records and totals only, with no advice wording.

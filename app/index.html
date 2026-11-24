@@ -2352,7 +2352,7 @@ function goalsClick(a,id,b){
   return false;
 }
 function goalsSubmit(k,id,f){
-  if(k==="fgnew"){var t=val("fgn-title");if(!t)return true;var nid=newId();write("f_goals",nid,{title:t,area:val("fgn-area"),due:val("fgn-due"),target:"",why:"",status:"active",steps:[],milestones:[],by:famMe(),created:today(),updated:today()}).then(function(ok){if(ok){ui.fgo=nid;render();window.scrollTo(0,0)}});document.getElementById("fgn-title").value="";return true}
+  if(k==="fgnew"){var t=val("fgn-title");if(!t)return true;var nid=newId();write("f_goals",nid,{title:t,area:val("fgn-area"),due:val("fgn-due"),target:"",why:"",status:"active",steps:[],milestones:[],by:famMe(),created:today(),updated:today()}).then(function(ok){if(ok){ui.fgo=nid;render();window.scrollTo(0,0)}});["fgn-title","fgn-due"].forEach(function(x){var e=document.getElementById(x);if(e)e.value=""});return true}
   if(k==="fgitem"){var kk=f.getAttribute("data-k"),inp=document.getElementById("fgi-"+kk),tx=inp?inp.value.trim():"";if(!tx)return true;var who=kk==="steps"?val("fgi-who"):"";inp.value="";fgSave(id,function(g){var it={t:tx,done:false};if(kk==="steps")it.who=who;(g[kk]=g[kk]||[]).push(it)});return true}
   return false;
 }
@@ -2418,7 +2418,7 @@ function famGiftsView(){
 function moneyClick(a,id,b){
   if(a==="hm-mv"){var r=pd(hMonth()+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.hm=ymd(r).slice(0,7);render();return true}
   if(a==="hm-now"){ui.hm=null;render();return true}
-  if(a==="gift-for"){ui.gfFor=b.getAttribute("data-who");ui.gfOcc=b.getAttribute("data-occ");render();var i=document.getElementById(ui.gfFor?"gf-idea":"gf-for");if(i){i.scrollIntoView({block:"center"});i.focus()}return true}
+  if(a==="gift-for"){ui.gfFor=b.getAttribute("data-who");ui.gfOcc=b.getAttribute("data-occ");var gff=document.getElementById("gf-for");if(gff)gff.value=ui.gfFor;var gfo=document.getElementById("gf-occ");if(gfo)gfo.value=ui.gfOcc;render();var i=document.getElementById(ui.gfFor?"gf-idea":"gf-for");if(i){i.scrollIntoView({block:"center"});i.focus()}return true}
   return false;
 }
 function moneySubmit(k,id,f){
@@ -2431,7 +2431,7 @@ function moneySubmit(k,id,f){
   if(k==="gift"){var idea=val("gf-idea");if(!idea){ui.err="Write what the gift is.";render();return true}var wh=val("gf-where");if(wh&&/^[a-z0-9-]+\.[a-z]{2,}/i.test(wh)&&!/\s/.test(wh))wh="https://"+wh;
     var sec=document.getElementById("gf-secret").checked,occ2=val("gf-occ")||"Birthday",fy=+today().slice(0,4);
     var g={forName:val("gf-for"),occasion:occ2,idea:idea,price:val("gf-price"),where:wh,status:"idea",year:occ2==="Christmas"&&today().slice(5)>"12-25"?fy+1:fy,by:me,byName:mn,created:today()};
-    savedNote(write(sec?"gifts":"f_gifts",newId(),g));ui.gfFor="";ui.gfOcc="";["gf-idea","gf-price","gf-where"].forEach(function(x2){document.getElementById(x2).value=""});return true}
+    savedNote(write(sec?"gifts":"f_gifts",newId(),g));ui.gfFor="";ui.gfOcc="";["gf-for","gf-idea","gf-price","gf-where"].forEach(function(x2){document.getElementById(x2).value=""});var gs2=document.getElementById("gf-secret");if(gs2)gs2.checked=false;var go2=document.getElementById("gf-occ");if(go2)go2.selectedIndex=0;return true}
   return false;
 }
 function moneyChange(e){
@@ -2657,7 +2657,7 @@ function s6Submit(k,id,f){
     if(document.getElementById("fi-"+q+"-q"))it.qty=val("fi-"+q+"-q");if(document.getElementById("fi-"+q+"-w"))it.who=val("fi-"+q+"-w");if(document.getElementById("fi-"+q+"-d")){it.date=val("fi-"+q+"-d");it.time=val("fi-"+q+"-tm")}
     write("f_items",newId(),it);["-t","-q","-tm"].forEach(function(s){var e=document.getElementById("fi-"+q+s);if(e)e.value=""});var tf=document.getElementById("fi-"+q+"-t");if(tf)tf.focus();return true}
   if(k==="flist"){var n=val("fln-name");if(!n)return true;var nid=newId();write("f_lists",nid,{name:n,kind:val("fln-kind")||"other",ord:9,created:today()}).then(function(ok){if(ok){ui.flo=nid;render()}});document.getElementById("fln-name").value="";return true}
-  if(k==="ftrip"){var tn=val("ftn-name");if(!tn)return true;var st=val("ftn-start"),en=val("ftn-end"),tid=newId();write("f_trips",tid,{name:tn,kind:val("ftn-kind")||"trip",start:st,end:en&&en>=st?en:"",status:st?"planning":"idea",who:[],by:famMe(),created:today()}).then(function(ok){if(ok){ui.ftr=tid;render();window.scrollTo(0,0)}});document.getElementById("ftn-name").value="";return true}
+  if(k==="ftrip"){var tn=val("ftn-name");if(!tn)return true;var st=val("ftn-start"),en=val("ftn-end"),tid=newId();write("f_trips",tid,{name:tn,kind:val("ftn-kind")||"trip",start:st,end:en&&en>=st?en:"",status:st?"planning":"idea",who:[],by:famMe(),created:today()}).then(function(ok){if(ok){ui.ftr=tid;render();window.scrollTo(0,0)}});["ftn-name","ftn-start","ftn-end"].forEach(function(x){var e=document.getElementById(x);if(e)e.value=""});return true}
   return false;
 }
 function s6Change(e){

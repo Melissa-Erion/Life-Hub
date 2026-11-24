@@ -589,6 +589,17 @@ h2.exall{margin:0}
 label.gshare{gap:8px;align-items:center}
 label.gshare input{width:17px;height:17px;accent-color:var(--ink)}
 .fform{display:flex;flex-direction:column;gap:10px}
+.fform > .f{flex:none}
+.fsub{margin:18px 0 8px;align-items:center}
+.fsub h3{margin:0}
+.fchk{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+.fchk input{width:18px;height:18px;margin-top:2px;flex:none;accent-color:var(--ink)}
+.fchore.isdone b{text-decoration:line-through;color:var(--muted)}
+.fod{color:var(--signal)}
+.pill.fodp{border-color:var(--signal);color:var(--signal)}
+.fstart{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 16px;margin:10px 0}
+.fstart label{display:flex;gap:8px;align-items:flex-start;font-size:.92rem}
+.fstart input{margin-top:3px;flex:none}
 .fwrap{flex-wrap:wrap;align-items:flex-end}
 .fwho{border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 16px;margin:0}
 .fwho legend{font-size:.78rem;font-weight:700;color:var(--muted);padding:0 4px}
@@ -649,7 +660,7 @@ nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
 /* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
-var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
+var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
 function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
 var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses"];
@@ -1923,11 +1934,14 @@ function whenWord(d){var n=daysTo(d);return n===0?"Today":n===1?"Tomorrow":n<7?p
 function famOn(ds){
   var out=[];
   list("f_events").forEach(function(e){if(!e.date)return;var hit=e.yearly?(e.date.slice(5)===ds.slice(5)&&e.date<=ds):(e.date===ds||(e.end&&e.date<=ds&&e.end>=ds));if(hit)out.push({kind:"event",ev:e,t:e.time||""})});
+  list("f_todos").forEach(function(t){if(!t.done&&t.due===ds)out.push({kind:"job",j:"todo",it:t,t:"~"})});
+  list("f_maint").forEach(function(m){if(mNext(m)===ds)out.push({kind:"job",j:"maint",it:m,t:"~"})});
   famPeople().forEach(function(p){if(p.birthday&&p.birthday.slice(-5)===ds.slice(5)){var a=p.birthday.length>=10?+ds.slice(0,4)-+p.birthday.slice(0,4):null;out.push({kind:"bday",p:p,t:"",age:a})}});
   return out.sort(function(a,b){return(a.kind==="bday"?"0":"1"+(a.t||"99")).localeCompare(b.kind==="bday"?"0":"1"+(b.t||"99"))});
 }
 function famUpcoming(n){var r=[];for(var i=0;i<n;i++){var ds=addDays(today(),i);famOn(ds).forEach(function(x){x.d=ds;r.push(x)})}return r}
 function famItemBox(x,full){
+  if(x.kind==="job"){var it=x.it,tm=x.j==="todo";return'<div class="mini"><span class="small muted">'+esc(whenWord(x.d))+' · '+(tm?"To-do":"Home upkeep")+'</span><b style="overflow-wrap:anywhere">'+esc(tm?it.text:it.name)+'</b><span class="small muted">'+esc(pName(it.who)||"Anyone")+'</span><button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fam-tab" data-tab="'+(tm?"chores":"upkeep")+'" data-pre="'+(tm?"ftd-":"fm-")+'" data-id="'+it.id+'">Open</button></div>'}
   if(x.kind==="bday")return'<div class="mini fbday"><span class="small muted">'+esc(whenWord(x.d))+'</span><b>'+esc(x.p.name)+"’s birthday"+'</b><span class="small">'+(x.age!=null&&x.age>0?"Turns "+x.age:"Birthday")+'</span></div>';
   var e=x.ev,who=(e.who||[]).map(function(id){return S.f_people[id]&&S.f_people[id].name}).filter(Boolean);
   var h='<div class="mini" id="fev-'+e.id+'"><span class="small muted">'+esc(whenWord(x.d))+(e.time?" · "+esc(e.time):"")+(e.end&&e.end!==e.date&&!e.yearly?" to "+esc(e.end):"")+(e.yearly?" · every year":"")+'</span><b style="overflow-wrap:anywhere">'+esc(e.title)+'</b>';
@@ -1954,9 +1968,9 @@ function famCal(){
   var h='<div class="calhead"><h2>'+esc(first.toLocaleDateString("en-CA",{month:"long",year:"numeric"}))+'</h2><div class="row"><button class="btn ghost" data-act="fc-mv" data-n="-1" aria-label="Previous month">←</button><button class="btn" data-act="fc-now">Today</button><button class="btn ghost" data-act="fc-mv" data-n="1" aria-label="Next month">→</button></div></div><div class="cal">';
   ["sun","mon","tue","wed","thu","fri","sat"].forEach(function(w){h+='<span class="wd">'+w+'</span>'});
   for(var i=0;i<42;i++){var d=new Date(start);d.setDate(start.getDate()+i);var ds=ymd(d),out=ds.slice(0,7)!==m;if(i===35&&out)break;
-    var it=famOn(ds),ne=it.filter(function(x){return x.kind==="event"}).length,nb=it.length-ne;
+    var it=famOn(ds),ne=it.filter(function(x){return x.kind!=="bday"}).length,nb=it.length-ne;
     h+='<button class="'+(out?"out ":"")+(ds===td?"now ":"")+(ds===sd?"sel":"")+'" data-act="fc-day" data-d="'+ds+'" aria-label="'+ds+(ne?", "+ne+" event"+(ne>1?"s":""):"")+(nb?", birthday":"")+'"'+(ds===sd?' aria-pressed="true"':"")+'>'+d.getDate()+'<span class="mk">'+(ne?"<i></i>":"")+(nb?'<i class="due"></i>':"")+'</span></button>'}
-  return h+'</div><p class="small muted">● event &nbsp; ○ birthday</p>';
+  return h+'</div><p class="small muted">● event or job &nbsp; ○ birthday</p>';
 }
 function habDone7(x){var n=0;for(var i=0;i<7;i++)if((x.days||{})[dayStr(i)])n++;return n}
 function famHabits(uid){return list("f_habits").filter(function(x){return x.owner===uid}).sort(function(a,b){return hper(b)-hper(a)||a.name.localeCompare(b.name)})}
@@ -1986,17 +2000,20 @@ function vFamily(){
   var h='<div class="head"><h1>'+esc(FAM?FAM.name:"Family")+'</h1><p class="muted">Your shared space. Each of you keeps a private hub; this page is the part you both see.</p></div>';
   if(!FAM)return h+'<div class="empty">The family space is not available in this view.</div>';
   if(!ui.fam)ui.fam="home";
-  h+=tog("fam",[["home","Overview"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
+  h+=tog("fam",[["home","Overview"],["chores","Chores"],["upkeep","Home upkeep"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
   var t=ui.fam;
   if(t==="home"){
     var up=famUpcoming(14);
     h+=vh("Next two weeks",up.length?up.length+" coming up":"");
     h+=up.length?'<div class="grid g3 fill">'+up.slice(0,9).map(function(x){return famItemBox(x,false)}).join("")+'</div>'+(up.length>9?'<p class="small muted">'+(up.length-9)+' more on the Calendar.</p>':""):'<div class="empty small">Nothing in the next two weeks. Add events on the Calendar tab.</div>';
+    h+=vh("Home","chores, to-dos and upkeep");h+=famHomeTiles();h+='<div class="row"><button class="btn" data-act="fam-tab" data-tab="chores">Open chores</button><button class="btn" data-act="fam-tab" data-tab="upkeep">Open home upkeep</button></div>';
     h+=vh("Habits","consistency");h+=famScoreTiles();
     h+=famGoalsHtml();
     h+=vh("Members",FAM.members.length+" signed in");
     h+='<div class="grid g3 fill">'+FAM.members.map(function(m){return'<div class="mini"><b>'+esc(m.name)+(m.me?' <span class="pill">You</span>':"")+'</b><span class="small muted">'+(m.role==="owner"?"Owner":"Member")+'</span>'+(m.me?'<div class="f"><label for="fam-name">Your name here</label><input type="text" id="fam-name" data-famname="1" value="'+esc(m.name)+'"></div>':"")+'</div>'}).join("")+'<div class="mini"><b>New here?</b><span class="small">The tour walks through every page and what it is for.</span><button class="btn" style="align-self:flex-start" data-act="tour">Take the tour</button></div></div>';
   }
+  if(t==="chores")h+=famChoresView();
+  if(t==="upkeep")h+=famUpkeepView();
   if(t==="habits"){
     h+=vh("Family habits","separate from your personal habits");
     h+='<p class="small muted">Habits you track here are seen by both of you, so you can keep each other going. Your personal habits on Today stay private. Each square is a day, newest on the right.</p>';
@@ -2055,6 +2072,7 @@ function vHelp(){
   return h;
 }
 function famClick(a,id,b){
+  if(choresClick(a,id,b))return true;
   if(a==="fc-day"){ui.fday=b.getAttribute("data-d");ui.fm=ui.fday.slice(0,7);ui.fev=null;render();return true}
   if(a==="fc-mv"){var r=pd((ui.fm||(ui.fday||today()).slice(0,7))+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.fm=ymd(r).slice(0,7);render();return true}
   if(a==="fc-now"){ui.fday=today();ui.fm=null;render();return true}
@@ -2069,6 +2087,7 @@ function famClick(a,id,b){
   return false;
 }
 function famSubmit(k,id,f){
+  if(choresSubmit(k,id,f))return true;
   if(k==="fhab"){var n=val("fh-name");if(!n||!famMe())return true;write("f_habits",newId(),{name:n,per:+val("fh-per")||7,owner:famMe(),days:{},created:today()}).then(function(ok){if(ok)flash("Added. Your family can see it.")});document.getElementById("fh-name").value="";return true}
   if(k==="fev"){var p=id?"fe-ed-":"fe-new-",t=val(p+"title"),d=val(p+"date");if(!t||!d){ui.err="Add what it is and the date.";render();return true}
     var who=[].slice.call(f.querySelectorAll('input[name="'+p+'who"]:checked')).map(function(x){return x.value}),en=val(p+"end");
@@ -2083,9 +2102,115 @@ function famSubmit(k,id,f){
   return false;
 }
 function famChange(e){
+  if(choresChange(e))return true;
   if(e.hasAttribute("data-fhtoday")){var hid=e.getAttribute("data-fhtoday"),x=S.f_habits[hid];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};if(e.checked)x.days[dayStr(0)]=1;else delete x.days[dayStr(0)];write("f_habits",hid,x);return true}
   if(e.hasAttribute("data-fp")){var pid=e.getAttribute("data-id"),fk=e.getAttribute("data-fp"),pr=S.f_people[pid];if(!pr)return true;var v=e.value.trim();if(fk==="name"&&!v){render();return true}pr=clone(pr);pr[fk]=v;savedNote(write("f_people",pid,pr));return true}
   if(e.hasAttribute("data-fbset")){var fid=e.getAttribute("data-id"),fr=S.f_feedback[fid];if(!fr)return true;fr=clone(fr);fr[e.getAttribute("data-fbset")]=e.value.trim();savedNote(write("f_feedback",fid,fr));return true}
+  return false;
+}
+/* ---------- family chores, to-dos and home upkeep ---------- */
+var FREQ=[["daily","Every day"],["weekly","Every week"],["biweekly","Every two weeks"],["monthly","Every month"]],WDAYS=["Sundays","Mondays","Tuesdays","Wednesdays","Thursdays","Fridays","Saturdays"];
+var MAREAS=["Home","Yard and outside","Heating and cooling","Appliances","Safety","Vehicles","Pets","Other"];
+var MEVERY=[[1,"Every month"],[3,"Every 3 months"],[6,"Every 6 months"],[12,"Every year"],[24,"Every 2 years"],[36,"Every 3 years"]];
+var MSTART=[["Replace furnace filter","Heating and cooling",3,""],["Furnace service","Heating and cooling",12,"9"],["Air conditioner service","Heating and cooling",12,"5"],["Test smoke and carbon monoxide alarms","Safety",6,""],["Replace smoke alarm batteries","Safety",12,"11"],["Check fire extinguisher","Safety",12,"11"],["Clean gutters","Yard and outside",12,"10"],["Turn off outside taps for winter","Yard and outside",12,"10"],["Turn outside taps back on","Yard and outside",12,"4"],["Put winter tires on","Vehicles",12,"11"],["Take winter tires off","Vehicles",12,"4"],["Oil change","Vehicles",6,""],["Clean dryer vent","Appliances",12,""],["Flush water heater","Appliances",12,""],["Clean fridge coils","Appliances",12,""],["Clean dishwasher filter","Appliances",1,""],["Chimney or fireplace check","Heating and cooling",12,"9"],["Pet checkups and vaccines","Pets",12,""],["Deep clean windows","Home",12,"5"],["Check caulking in bathrooms","Home",12,""]];
+function pOpts(sel,any){return(any?'<option value="">'+esc(any)+'</option>':"")+famPeople().map(function(p){return'<option value="'+p.id+'"'+(p.id===sel?" selected":"")+'>'+esc(p.name)+'</option>'}).join("")}
+function pName(id){return id&&S.f_people[id]?S.f_people[id].name:""}
+function chKey(c){var t=today();if(c.freq==="daily")return t;if(c.freq==="weekly")return"w"+wkStart(t);if(c.freq==="monthly")return"m"+t.slice(0,7);var ws=wkStart(t);return"b"+Math.floor(Math.round((pd(ws)-pd("2026-01-04"))/864e5)/14)}
+function chDone(c){return(c.log||{})[chKey(c)]}
+function chPer(c){return{daily:"today",weekly:"this week",biweekly:"these two weeks",monthly:"this month"}[c.freq]||"this week"}
+function famChores(){var w=ui.fcw||"all";return list("f_chores").filter(function(c){return w==="all"||(w==="any"?!c.who:c.who===w)}).sort(function(a,b){return((chDone(a)?"1":"0")+a.name).localeCompare((chDone(b)?"1":"0")+b.name)})}
+function choreForm(c){
+  var p=c?"fch-ed-":"fch-new-",x=c||{freq:"weekly"};
+  return'<form class="fform" data-form="fch"'+(c?' data-id="'+c.id+'"':"")+'><div class="row fwrap"><div class="f" style="flex:2 1 200px"><label for="'+p+'name">Chore</label><input type="text" id="'+p+'name" class="keep" value="'+esc(x.name||"")+'" placeholder="Take out the garbage, feed the pets"></div><div class="f"><label for="'+p+'who">Who</label><select id="'+p+'who" class="keep">'+pOpts(x.who,"Anyone")+'</select></div><div class="f"><label for="'+p+'freq">How often</label><select id="'+p+'freq" class="keep">'+FREQ.map(function(f){return'<option value="'+f[0]+'"'+(x.freq===f[0]?" selected":"")+'>'+f[1]+'</option>'}).join("")+'</select></div><div class="f"><label for="'+p+'day">Usual day</label><select id="'+p+'day" class="keep"><option value="">Any day</option>'+WDAYS.map(function(d,i){return'<option value="'+i+'"'+(String(x.day)===String(i)?" selected":"")+'>'+d+'</option>'}).join("")+'</select></div></div>'+(c?'<div class="f"><label for="'+p+'notes">Notes</label><textarea id="'+p+'notes" class="keep" rows="2">'+esc(x.notes||"")+'</textarea></div>':"")+'<div class="row"><button class="btn'+(c?" primary":"")+'" type="submit">'+(c?"Save changes":"Add chore")+'</button>'+(c?'<button class="btn ghost" type="button" data-act="fch-cancel">Cancel</button>':"")+'</div></form>';
+}
+function choreBox(c){
+  var d=chDone(c),who=pName(c.who),last=c.last;
+  if(ui.fch===c.id)return'<div class="mini" id="fch-'+c.id+'">'+choreForm(c)+'</div>';
+  return'<div class="mini fchore'+(d?" isdone":"")+'" id="fch-'+c.id+'"><label class="fchk"><input type="checkbox" data-fchdone="'+c.id+'"'+(d?" checked":"")+'><b>'+esc(c.name)+'</b></label><span class="small muted">'+esc((FREQ.filter(function(f){return f[0]===c.freq})[0]||FREQ[1])[1])+(c.day!==""&&c.day!=null&&c.freq!=="daily"?" · "+WDAYS[+c.day]:"")+' · '+esc(who||"Anyone")+'</span><span class="small">'+(d?"Done "+chPer(c)+(d.byName?" by "+esc(d.byName):""):"Not done "+chPer(c))+(!d&&last?' · last done '+esc(whenAgo(last.date)):"")+'</span>'+(c.notes?'<p class="small fnotes muted">'+esc(c.notes)+'</p>':"")+'<div class="row"><button class="btn ghost" style="padding:4px 10px;font-size:.8rem" data-act="fch-edit" data-id="'+c.id+'">Edit</button><button class="btn ghost" style="padding:4px 10px;font-size:.8rem" data-act="del" data-coll="f_chores" data-id="'+c.id+'">'+(ui.confirm==="f_chores/"+c.id?"Confirm delete":"Delete")+'</button></div></div>';
+}
+function whenAgo(d){var n=-daysTo(d);return n<=0?"today":n===1?"yesterday":n<14?n+" days ago":pd(d).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}
+function todoBox(t){
+  var who=pName(t.who),od=!t.done&&t.due&&t.due<today();
+  return'<div class="mini fchore'+(t.done?" isdone":"")+'" id="ftd-'+t.id+'"><label class="fchk"><input type="checkbox" data-ftddone="'+t.id+'"'+(t.done?" checked":"")+'><b>'+esc(t.text)+'</b></label><span class="small'+(od?" fod":" muted")+'">'+(t.due?(od?"Overdue · was due "+esc(whenAgo(t.due)):"Due "+esc(whenWord(t.due))):"No date")+' · '+esc(who||"Anyone")+'</span>'+(t.done?'<span class="small">Done '+esc(whenAgo(t.doneAt||today()))+(t.doneByName?" by "+esc(t.doneByName):"")+'</span>':"")+'<button class="btn ghost" style="align-self:flex-start;padding:4px 10px;font-size:.8rem" data-act="del" data-coll="f_todos" data-id="'+t.id+'">'+(ui.confirm==="f_todos/"+t.id?"Confirm delete":"Delete")+'</button></div>';
+}
+function pad2(n){return(n<10?"0":"")+n}
+function mNext(m){
+  if(m.last){var d=pd(m.last);d.setMonth(d.getMonth()+(+m.every||12));return ymd(d)}
+  if(m.month){var t=today(),y=+t.slice(0,4),s=y+"-"+pad2(+m.month)+"-01";if(s.slice(0,7)<t.slice(0,7))s=(y+1)+"-"+pad2(+m.month)+"-01";return s}
+  return null;
+}
+function mState(m){var n=mNext(m),t=today();if(!n)return{k:"new",n:null};if(n<t.slice(0,7)+"-01"||(m.last&&n<t))return{k:"over",n:n};if(daysTo(n)<=31||n.slice(0,7)===t.slice(0,7))return{k:"soon",n:n};return{k:"later",n:n}}
+function maintForm(m){
+  var p=m?"fm-ed-":"fm-new-",x=m||{every:12,area:"Home"};
+  return'<form class="fform" data-form="fmaint"'+(m?' data-id="'+m.id+'"':"")+'><div class="row fwrap"><div class="f" style="flex:2 1 220px"><label for="'+p+'name">Job</label><input type="text" id="'+p+'name" class="keep" value="'+esc(x.name||"")+'" placeholder="Clean gutters, service the furnace"></div><div class="f"><label for="'+p+'area">Area</label><select id="'+p+'area" class="keep">'+MAREAS.map(function(a){return'<option'+(x.area===a?" selected":"")+'>'+a+'</option>'}).join("")+'</select></div><div class="f"><label for="'+p+'every">How often</label><select id="'+p+'every" class="keep">'+MEVERY.map(function(e){return'<option value="'+e[0]+'"'+(+x.every===e[0]?" selected":"")+'>'+e[1]+'</option>'}).join("")+'</select></div></div><div class="row fwrap"><div class="f"><label for="'+p+'month">Best month (optional)</label><select id="'+p+'month" class="keep"><option value="">Any time</option>'+[1,2,3,4,5,6,7,8,9,10,11,12].map(function(i){return'<option value="'+i+'"'+(+x.month===i?" selected":"")+'>'+pd("2026-"+pad2(i)+"-01").toLocaleDateString("en-CA",{month:"long"})+'</option>'}).join("")+'</select></div><div class="f"><label for="'+p+'last">Last done</label><input type="date" id="'+p+'last" class="keep" value="'+esc(x.last||"")+'"></div><div class="f"><label for="'+p+'who">Who usually does it</label><select id="'+p+'who" class="keep">'+pOpts(x.who,"Anyone")+'</select></div></div><div class="f"><label for="'+p+'notes">Notes</label><textarea id="'+p+'notes" class="keep" rows="2" placeholder="Filter size, company you call, what it usually costs">'+esc(x.notes||"")+'</textarea></div><div class="row"><button class="btn'+(m?" primary":"")+'" type="submit">'+(m?"Save changes":"Add job")+'</button>'+(m?'<button class="btn ghost" type="button" data-act="fm-cancel">Cancel</button><button class="btn danger" type="button" data-act="del" data-coll="f_maint" data-id="'+m.id+'">'+(ui.confirm==="f_maint/"+m.id?"Confirm delete":"Delete job")+'</button>':"")+'</div></form>';
+}
+function maintBox(m){
+  if(ui.fmx===m.id)return'<div class="mini" id="fm-'+m.id+'">'+maintForm(m)+'</div>';
+  var st=mState(m),ev=(MEVERY.filter(function(e){return e[0]===+m.every})[0]||[0,"Every "+m.every+" months"])[1],hist=(m.hist||[]).slice(-3).reverse();
+  var due=st.k==="new"?"Not recorded yet. Mark it done next time, or add when it was last done.":(st.k==="over"?"Overdue · was due ":"Next due ")+pd(st.n).toLocaleDateString("en-CA",m.last?{month:"short",day:"numeric",year:"numeric"}:{month:"long",year:"numeric"});
+  return'<div class="mini fmaint" id="fm-'+m.id+'"><div class="spread"><b>'+esc(m.name)+'</b>'+(st.k==="over"?'<span class="pill fodp">Overdue</span>':st.k==="soon"?'<span class="pill">Due soon</span>':"")+'</div><span class="small muted">'+esc(m.area||"Home")+' · '+esc(ev)+(m.who?" · "+esc(pName(m.who)):"")+'</span><span class="small'+(st.k==="over"?" fod":"")+'">'+esc(due)+'</span>'+(m.last?'<span class="small muted">Last done '+esc(pd(m.last).toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"}))+(hist[0]&&hist[0].byName&&hist[0].date===m.last?" by "+esc(hist[0].byName):"")+'</span>':"")+(m.notes?'<p class="small fnotes muted">'+esc(m.notes)+'</p>':"")+'<div class="row"><button class="btn" style="padding:4px 12px;font-size:.8rem" data-act="fm-done" data-id="'+m.id+'">Mark done today</button><button class="btn ghost" style="padding:4px 10px;font-size:.8rem" data-act="fm-edit" data-id="'+m.id+'">Edit</button></div></div>';
+}
+function famHomeTiles(){
+  var ch=list("f_chores"),cd=ch.filter(chDone).length,td=list("f_todos").filter(function(t){return !t.done}),ms=list("f_maint").map(mState),mo=ms.filter(function(s){return s.k==="over"}).length,mso=ms.filter(function(s){return s.k==="soon"}).length;
+  return'<div class="grid g3 fill"><div class="tile"><b>'+(ch.length?cd+"/"+ch.length:"–")+'</b><span>chores done for this round</span></div><div class="tile"><b>'+td.length+'</b><span>open to-do'+(td.length===1?"":"s")+(td.filter(function(t){return t.due&&t.due<today()}).length?" · "+td.filter(function(t){return t.due&&t.due<today()}).length+" overdue":"")+'</span></div><div class="tile"><b>'+(mo+mso)+'</b><span>upkeep job'+(mo+mso===1?"":"s")+' due'+(mo?" · "+mo+" overdue":"")+'</span></div></div>';
+}
+function famChoresView(){
+  var h=vh("Chores",list("f_chores").length+" repeating");
+  var ppl=famPeople().filter(function(p){return p.kind!=="pet"});
+  h+=tog("fcw",[["all","Everyone"]].concat(ppl.map(function(p){return[p.id,p.name]})).concat([["any","Anyone"]]));
+  h+='<p class="small muted">Tick a chore when it is done. It resets by itself when the next day, week or month starts. Anyone can tick for the kids.</p>';
+  var cs=famChores();
+  FREQ.forEach(function(f){var g=cs.filter(function(c){return(c.freq||"weekly")===f[0]});if(!g.length)return;h+='<div class="row fsub"><h3>'+f[1]+'</h3><span class="pill">'+g.filter(chDone).length+' of '+g.length+' done</span></div><div class="grid g3 fill">'+g.map(choreBox).join("")+'</div>'});
+  if(!cs.length)h+='<div class="empty small">'+(list("f_chores").length?"No chores for this person.":"No chores yet. Add the jobs that repeat, and who does them.")+'</div>';
+  h+='<div class="card">'+choreForm(null)+'</div>';
+  var fw=ui.fcw||"all",tds=list("f_todos").filter(function(t){return fw==="all"||(fw==="any"?!t.who:t.who===fw)}),open=tds.filter(function(t){return !t.done}).sort(function(a,b){return((a.due||"9999")+a.text).localeCompare((b.due||"9999")+b.text)}),done=tds.filter(function(t){return t.done&&daysTo(t.doneAt||today())>-30}).sort(function(a,b){return(b.doneAt||"").localeCompare(a.doneAt||"")});
+  h+=vh("To-dos",open.length+" open");
+  h+='<p class="small muted">One-off jobs. Ones with a date also show on the Calendar.</p>';
+  h+=open.length?'<div class="grid g3 fill">'+open.map(todoBox).join("")+'</div>':'<div class="empty small">Nothing on the list.</div>';
+  h+='<div class="card"><form class="add" data-form="ftodo"><input type="text" id="ftd-text" class="keep" placeholder="Book the plumber, return library books" aria-label="New to-do" style="flex:3 1 220px"><select id="ftd-who" class="keep" aria-label="Who" style="flex:1 1 130px">'+pOpts("","Anyone")+'</select><input type="date" id="ftd-due" class="keep" aria-label="Due date" style="flex:1 1 140px"><button class="btn" type="submit">Add to-do</button></form></div>';
+  if(done.length)h+='<details class="earlier"><summary class="small">Done in the last 30 days ('+done.length+')</summary><div class="grid g3 fill" style="margin-top:10px">'+done.map(todoBox).join("")+'</div></details>';
+  return h;
+}
+function famUpkeepView(){
+  var ms=list("f_maint").map(function(m){m.st=mState(m);return m}),ord={over:0,soon:1,"new":2,later:3};
+  ms.sort(function(a,b){return ord[a.st.k]-ord[b.st.k]||(a.st.n||"").localeCompare(b.st.n||"")||a.name.localeCompare(b.name)});
+  var h=vh("Home upkeep",ms.length+" jobs");
+  h+='<p class="small muted">Jobs that come round every few months or once a year. Mark one done and the next date is worked out for you.</p>';
+  var grp=[["over","Overdue"],["soon","Due this month or next few weeks"],["new","Not recorded yet"],["later","Later"]];
+  grp.forEach(function(g){var it=ms.filter(function(m){return m.st.k===g[0]});if(!it.length)return;h+='<div class="row fsub"><h3>'+g[1]+'</h3><span class="pill">'+it.length+'</span></div><div class="grid g3 fill">'+it.map(maintBox).join("")+'</div>'});
+  if(!ms.length)h+='<div class="empty small">No upkeep jobs yet. Start with the common list below, or add your own.</div>';
+  var have={};ms.forEach(function(m){have[m.name.toLowerCase()]=1});var left=MSTART.filter(function(x){return !have[x[0].toLowerCase()]});
+  if(left.length){h+='<div class="card"><div class="spread"><h3 style="margin:0">Common jobs</h3><button class="btn ghost" data-act="fm-start">'+(ui.fmStart?"Hide":"Show list")+'</button></div>';
+    if(ui.fmStart)h+='<p class="small muted">Tick the ones that apply to your home, then add them. You can change any of them after.</p><div class="fstart">'+left.map(function(x,i){return'<label><input type="checkbox" class="fms" value="'+esc(x[0])+'"> '+esc(x[0])+' <span class="small muted">· '+esc((MEVERY.filter(function(e){return e[0]===x[2]})[0]||[])[1]||"")+(x[3]?" · "+pd("2026-"+pad2(+x[3])+"-01").toLocaleDateString("en-CA",{month:"long"}):"")+'</span></label>'}).join("")+'</div><div class="row"><button class="btn primary" data-act="fm-addstart">Add ticked jobs</button></div>';
+    h+='</div>'}
+  h+='<div class="card"><h3 style="margin-top:0">Add your own</h3>'+maintForm(null)+'</div>';
+  return h;
+}
+function choresClick(a,id,b){
+  if(a==="fch-edit"){ui.fch=id;render();return true}
+  if(a==="fch-cancel"){ui.fch=null;render();return true}
+  if(a==="fm-edit"){ui.fmx=id;render();return true}
+  if(a==="fm-cancel"){ui.fmx=null;render();return true}
+  if(a==="fm-start"){ui.fmStart=!ui.fmStart;render();return true}
+  if(a==="fm-done"){var m=S.f_maint[id];if(!m)return true;m=clone(m);m.last=today();(m.hist=m.hist||[]).push({date:today(),by:famMe(),byName:memName(famMe())});m.hist=m.hist.slice(-20);write("f_maint",id,m).then(function(ok){if(ok)flash("Done. Next due "+pd(mNext(m)).toLocaleDateString("en-CA",{month:"long",day:"numeric",year:"numeric"})+".")});return true}
+  if(a==="fm-addstart"){var picks=[].slice.call(document.querySelectorAll("input.fms:checked")).map(function(x){return x.value});if(!picks.length){flash("Tick at least one job.");return true}
+    writeSeq(MSTART.filter(function(x){return picks.indexOf(x[0])>=0}).map(function(x){return["f_maint",newId(),{name:x[0],area:x[1],every:x[2],month:x[3],last:"",who:"",notes:"",hist:[],created:today()}]})).then(function(){flash("Added "+picks.length+" job"+(picks.length>1?"s":"")+".")});ui.fmStart=false;return true}
+  if(a==="fam-tab"){ui.fam=b.getAttribute("data-tab");ui.scrollTo=id?b.getAttribute("data-pre")+id:null;if(current()!=="family")location.hash="#family";else render();return true}
+  return false;
+}
+function choresSubmit(k,id,f){
+  if(k==="fch"){var p=id?"fch-ed-":"fch-new-",n=val(p+"name");if(!n)return true;var c=id&&S.f_chores[id]?clone(S.f_chores[id]):{log:{},created:today(),by:famMe()};
+    Object.assign(c,{name:n,who:val(p+"who"),freq:val(p+"freq")||"weekly",day:val(p+"day")});if(id)c.notes=val(p+"notes");
+    ui.fch=null;savedNote(write("f_chores",id||newId(),c));if(!id)document.getElementById(p+"name").value="";render();return true}
+  if(k==="ftodo"){var t=val("ftd-text");if(!t)return true;write("f_todos",newId(),{text:t,who:val("ftd-who"),due:val("ftd-due"),done:false,by:famMe(),created:today()});document.getElementById("ftd-text").value="";document.getElementById("ftd-due").value="";return true}
+  if(k==="fmaint"){var q=id?"fm-ed-":"fm-new-",mn=val(q+"name");if(!mn)return true;var m=id&&S.f_maint[id]?clone(S.f_maint[id]):{hist:[],created:today()};
+    Object.assign(m,{name:mn,area:val(q+"area"),every:+val(q+"every")||12,month:val(q+"month"),last:val(q+"last"),who:val(q+"who"),notes:val(q+"notes")});
+    ui.fmx=null;savedNote(write("f_maint",id||newId(),m));if(!id){["name","last","notes"].forEach(function(s){var e=document.getElementById(q+s);if(e)e.value=""})}render();return true}
+  return false;
+}
+function choresChange(e){
+  if(e.hasAttribute("data-fchdone")){var cid=e.getAttribute("data-fchdone"),c=S.f_chores[cid];if(!c)return true;c=clone(c);c.log=c.log||{};var k=chKey(c);if(e.checked){c.log[k]={by:famMe(),byName:memName(famMe()),date:today()};c.last={date:today(),by:famMe()}}else delete c.log[k];var ks=Object.keys(c.log).sort();if(ks.length>60)ks.slice(0,ks.length-60).forEach(function(x){delete c.log[x]});write("f_chores",cid,c);return true}
+  if(e.hasAttribute("data-ftddone")){var tid=e.getAttribute("data-ftddone"),t=S.f_todos[tid];if(!t)return true;t=clone(t);t.done=e.checked;if(e.checked){t.doneAt=today();t.doneBy=famMe();t.doneByName=memName(famMe())}else{delete t.doneAt;delete t.doneBy;delete t.doneByName}write("f_todos",tid,t);return true}
   return false;
 }
 /* ---------- tour ---------- */
@@ -2095,7 +2220,7 @@ var TOUR=[
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
  ["log","Journal","One card per day. Press Add entry, write what happened and how you felt. Claude can read your entries and point out patterns over time, such as what drains you or what keeps you on track. Entries are private."],
- ["family","Family","The shared page. Overview shows the next two weeks, everyone’s habit consistency and shared goals. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
+ ["family","Family","The shared page. Overview shows the next two weeks, how the chores and home jobs are going, habit consistency and shared goals. Chores holds the jobs that repeat (who does them, how often) and one-off to-dos. Home upkeep tracks jobs that come round every few months or once a year, like the furnace filter or winter tires, and works out when each is next due. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
  ["areas","Explore","Ideas for what to work on. Life is split into areas such as money, health, home and career. Pick up to three focus areas, browse the goal ideas inside each one, and add the ones you like as goals."],
  ["goals","Goals","Every goal has a target, a date, steps and milestones, and a result number you record over time. Flags tell you when a goal needs something, such as a date or a scheduled next step. To show a goal on the Family page, open it and tick Show to family; otherwise it stays private."],
  ["fit","Fitness","Training: build workouts and schedule them over weeks. Check-ins: record weight, measurements and photos to see progress. Nutrition: daily meals and macro targets. Fitness goals sit in their own tab."],

@@ -449,19 +449,27 @@ input[type=text]:focus,input[type=date]:focus,input[type=time]:focus,select:focu
 }
 /* header rows with arrows: let the title shrink and keep buttons together */
 .spread{flex-wrap:wrap}.spread .row{flex-wrap:nowrap}
-/* Phone navigation: bottom bar with five main pages + More */
-#more,#sheet{display:none}
+/* Phone navigation: a top bar with a menu button that slides in the full menu */
+#more,#sheet{display:none !important}
+#mbar,#navback{display:none}
 @media (max-width:760px){
-  nav{position:fixed;top:auto;left:0;right:0;bottom:0;height:auto;z-index:20;flex-direction:row;align-items:stretch;justify-content:space-between;overflow:visible;gap:0;padding:0 4px env(safe-area-inset-bottom,0px);border-right:0;border-bottom:0;border-top:1px solid var(--line);background:var(--bg)}
-  nav a:not(.m),nav #theme{display:none}
-  nav a.m,nav #more{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:15px 2px 13px;font-family:var(--display);font-weight:800;font-size:.64rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:none;border:0;border-top:2px solid transparent;border-radius:0;cursor:pointer}
-  nav a.m[aria-current="page"],nav #more.on{color:var(--ink);border-top-color:var(--ink)}
-  nav a[href="#today"]{order:1}nav a[href="#plan"]{order:2}nav a[href="#goals"]{order:3}nav a[href="#fit"]{order:4}nav a[href="#social"]{order:5}nav #more{order:6}
-  nav #more{display:flex}
-  main{padding-bottom:110px}
-  #sheet.open{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:fixed;left:12px;right:12px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:21;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
-  #sheet a,#sheet button{display:flex;align-items:center;justify-content:center;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--shade,var(--bg));color:var(--ink);text-decoration:none;font-family:var(--display);font-weight:800;font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-  #sheet a[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  #mbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:15;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
+  #mbar .mb-brand{font-family:var(--display);font-weight:900;font-size:1.05rem;letter-spacing:-.02em;color:var(--ink);text-decoration:none;flex:none}
+  #mbar .mb-page{font-family:var(--display);font-weight:800;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--navhd-ink);background:var(--navhd);border-radius:6px;padding:4px 9px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #mbar .mb-page:empty{display:none}
+  #menu{margin-left:auto;flex:none;width:44px;height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);cursor:pointer;padding:0}
+  #menu svg{width:22px;height:22px}
+  nav{position:fixed !important;top:0;bottom:0;left:0;right:auto;width:min(84vw,320px);height:100dvh;z-index:31;flex-direction:column !important;align-items:stretch;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;gap:0 !important;padding:calc(18px + env(safe-area-inset-top,0px)) 18px calc(24px + env(safe-area-inset-bottom,0px)) !important;border:0;border-right:1px solid var(--line);background:var(--bg);transform:translateX(-105%);transition:transform .22s ease;visibility:hidden}
+  body.navopen nav{transform:none;visibility:visible;box-shadow:0 0 40px rgba(0,0,0,.25)}
+  nav .brand{display:block !important;font-size:1.4rem;padding:2px 2px 14px;border-bottom:1px solid var(--ink)}
+  nav .navlbl{display:block !important;background:var(--navhd);color:var(--navhd-ink);opacity:1;font-size:.64rem;letter-spacing:.14em;padding:5px 9px;border-radius:6px;margin:14px 0 4px}
+  nav a,nav a.m{display:flex !important;flex:none !important;align-items:center;justify-content:space-between;text-align:left;padding:12px 10px !important;border:0 !important;border-bottom:1px solid var(--line) !important;border-radius:0;font-family:var(--display);font-weight:800;font-size:.86rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;order:0 !important}
+  nav a[aria-current="page"],nav a.m[aria-current="page"]{color:var(--ink) !important;font-weight:900;box-shadow:inset 3px 0 0 var(--navbar);background:linear-gradient(90deg,var(--navhd),transparent 85%)}
+  nav #theme{display:block !important;margin:18px 0 0;align-self:flex-start;padding:8px 14px}
+  #navback{position:fixed;inset:0;z-index:30;background:rgba(20,20,18,.38)}
+  body.navopen #navback{display:block}
+  body.navopen{overflow:hidden}
+  main{padding-bottom:60px}
 }
 /* Keep the page from growing wider than the screen, and stack add-forms cleanly on small phones */
 main{min-width:0}
@@ -472,8 +480,6 @@ main{min-width:0}
 /* No dots in the nav (Melissa's rule): the current page is shown by its darker text only */
 nav a[aria-current="page"]::after{display:none !important}
 @media (min-width:761px){nav a[aria-current="page"]{color:var(--ink);font-weight:900}}
-/* Smallest phones: tighter bottom-bar labels so they never touch */
-@media (max-width:360px){nav a.m,nav #more{font-size:.56rem;letter-spacing:.01em;padding-left:1px;padding-right:1px}}
 /* iPhone and iPad (Safari engine): date and time fields ignore normal sizing, so reset them */
 .f input,.f select,.f textarea{box-sizing:border-box;max-width:100%}
 input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;box-sizing:border-box;max-width:100%;min-width:0;min-height:40px;line-height:1.25;text-align:left}
@@ -690,12 +696,14 @@ span.dot{display:inline-block;cursor:default}
 @media (min-width:761px) and (max-height:940px){nav{padding-top:16px;padding-bottom:12px}nav a{padding-top:5px!important;padding-bottom:5px!important}.navlbl{margin:8px 0 2px;padding:3px 9px}nav .brand + .navlbl{margin-top:8px;padding-top:3px}nav .brand{padding-bottom:10px!important}}
 nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 #sheet a.tour-on{border-color:var(--ink)}
-@media (max-width:760px){#tour{left:16px;right:16px;width:auto;bottom:calc(70px + env(safe-area-inset-bottom,0px));max-height:55vh;overflow:auto}}
+@media (max-width:760px){#tour{left:16px;right:16px;width:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:55vh;overflow:auto}}
 </style>
 </head>
 <body>
 <div class="shell">
-  <nav aria-label="Views">
+  <header id="mbar"><a class="mb-brand" href="#today">Life Hub</a><span class="mb-page" id="mb-page"></span><button type="button" id="menu" aria-label="Open menu" aria-expanded="false" aria-controls="mainnav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></header>
+  <div id="navback"></div>
+  <nav aria-label="Views" id="mainnav">
     <div class="brand">Life Hub</div>
     <div class="navlbl">Daily</div>
     <a class="m" href="#today">Today</a>
@@ -2645,6 +2653,16 @@ function s6Change(e){
   if(e.hasAttribute("data-cis")){var sk=e.getAttribute("data-cis"),sv=e.value.trim();savedNote(ciSave(function(c){c[sk]=sv}));return true}
   return false;
 }
+/* ---------- phone menu ---------- */
+(function(){
+  var btn=document.getElementById("menu"),back=document.getElementById("navback"),nv=document.getElementById("mainnav");if(!btn||!nv)return;
+  function setOpen(o){document.body.classList.toggle("navopen",o);btn.setAttribute("aria-expanded",o?"true":"false");btn.setAttribute("aria-label",o?"Close menu":"Open menu");if(o){var c=nv.querySelector('a[aria-current="page"]')||nv.querySelector("a");if(c)c.focus({preventScroll:false})}else if(document.activeElement&&nv.contains(document.activeElement))btn.focus()}
+  btn.addEventListener("click",function(){setOpen(!document.body.classList.contains("navopen"))});
+  if(back)back.addEventListener("click",function(){setOpen(false)});
+  nv.addEventListener("click",function(e){if(e.target.closest("a"))setOpen(false)});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&document.body.classList.contains("navopen"))setOpen(false)});
+  window.addEventListener("resize",function(){if(innerWidth>760&&document.body.classList.contains("navopen"))setOpen(false)});
+})();
 /* ---------- install the app ---------- */
 var BIP=null;
 window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();BIP=e;if(db)render();if(tourEl&&ui.tour!=null)tourShow()});
@@ -2670,7 +2688,7 @@ function installGo(){if(!BIP){flash("Use the steps for your device.");return}var
 /* ---------- tour ---------- */
 var TOUR=[
  ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. The Family page is the one place you share. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
- ["today","Getting around","On a computer the pages are in the menu on the left, grouped by what they are for. On a phone the main pages sit in the bar at the bottom and everything else is under More. The button at the bottom of the menu switches between light and dark."],
+ ["today","Getting around","On a computer the pages are in the menu on the left, grouped by what they are for. On a phone, tap the menu button (three lines) at the top right to see every page. The button at the bottom of the menu switches between light and dark."],
  ["help","Install it as an app",function(){if(isInstalled())return"You are already using the installed app, so you can skip this. To add it to another device, open the app link there; the steps are on the Feedback page.";var k=devKind();return(k==="ios"?"On an iPhone: open the app link in Safari, tap the Share button (square with an up arrow) at the bottom, then Add to Home Screen, then Add.":k==="android"?"On an Android phone: in Chrome, tap the three dots at the top right, then Install app or Add to Home screen, then Install.":"On a computer: in Chrome or Edge, click the install icon at the right end of the address bar, or open the menu and choose Install.")+" It then opens like a normal app from its icon. The full steps for every device are on this page, under Install the app."}],
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
@@ -2706,6 +2724,7 @@ function tourAuto(){if(ui.tourAsked||!db)return;ui.tourAsked=true;if(!pdoc("tour
 var NAMES={};var VIEWS={family:vFamily,help:vHelp,study:vStudy,social:vSocial,money:vMoney,find:vFind,data:vData,fit:vFit,biz:vBiz,plan:vPlan,today:vToday,goals:vGoals,areas:vAreas,claude:vClaude,log:vLog,learn:vLearn};
 function current(){var h=location.hash.replace("#","");return VIEWS[h]?h:"today"}
 function render(){
+  var mbp=document.getElementById("mb-page");if(mbp){var cv=current();mbp.textContent=({family:"Family",help:"Feedback",study:"Learning",money:"Money",find:"Search",data:"Backup",fit:"Fitness",biz:"Business",plan:"Planner",today:"Today",goals:"Goals",areas:"Explore",claude:"Claude",log:"Journal",learn:"Library",social:"Social"})[cv]||""}
   var dae=document.activeElement;if(dae&&dae.type==="date"&&view.contains(dae)){if(current()===ui.lastRV){ui.pendingRender=true;return}dae.blur()}
   var cur=current();ui.lastRV=cur;ui.pendingRender=false;
   document.querySelectorAll("nav a").forEach(function(a){if(a.getAttribute("href")==="#"+cur)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});

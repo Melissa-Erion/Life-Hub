@@ -36,3 +36,7 @@ Theme: a toggle sets `data-theme` on `<html>` and stores `lifehub-theme` in loca
 ## Menu headers (added Nov 2026)
 
 Melissa asked for more hierarchy in the side menu. Group labels (Daily, Direction, Areas, Claude, Hub) are small bars in a faded orange (`--navhd`, text `--navhd-ink`), and the current page has a 3px orange bar on its left (`--navbar`) with a soft fade. This is the one place orange is used; red (`--signal`) stays for "today" and destructive actions. The phone bottom bar is unchanged.
+
+## Phone layout (Nov 2026)
+
+At 760px and below: a sticky top bar (`#mbar`) with the brand, the current page as an orange-tinted label, and a menu button (three lines). The button slides in the full side menu (`nav`, with the same orange group headers) over a dimmed backdrop; tapping a page, the backdrop or Escape closes it. There is no bottom bar. Toggle rows (`.jump`) stay on one line and scroll sideways. Overview box lists use `.rail` (and `.cols`) to scroll sideways with the next card peeking in. Number tiles sit two to a row. Sections get more space above them than cards get between them.

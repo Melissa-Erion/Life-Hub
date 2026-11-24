@@ -14,13 +14,14 @@
 | `#money` | `vMoney` | Budget, Savings, Net worth, Goals |
 | `#log` | `vLog` | Journal and wins/check-ins/lessons log |
 | `#claude` | `vClaude` | Skills (have / building / needed), improvement list |
+| `#study` | `vStudy` / `vCourse` | Learning: courses (lessons, notes, files, links, study plan) and a study planner |
 | `#learn` | `vLearn` | Library of resources and turning them into skills |
 | `#find` | `vFind` | Search |
 | `#data` | `vData` | Backup export and recently deleted |
 
 ## Data model
 
-Collections (`COLLS`): goals, skills, improve, log, resources, paths, habits, journal, tasks, plans, workouts, trackers, clients, projects, acts, routines, checkins, meals, money, subs, trash, invoices, pmoney, savings, accounts, briefs, socials. Plus two single docs: `meta/taxonomy` (areas and sub-categories) and `meta/levels`.
+Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, habits, journal, tasks, plans, workouts, trackers, clients, projects, acts, routines, checkins, meals, money, subs, trash, invoices, pmoney, savings, accounts, briefs, socials. Plus two single docs: `meta/taxonomy` (areas and sub-categories) and `meta/levels`.
 
 `plans` holds keyed docs rather than a list:
 
@@ -36,6 +37,9 @@ Collections (`COLLS`): goals, skills, improve, log, resources, paths, habits, jo
 | `sd-<profileId>` | `{docs:[{id,name,kind,date}]}` — documents uploaded for a Social account, shared by its platforms |
 
 Selected record shapes:
+
+- `courses`: `{name,provider,url,status:active|paused|done,target,next,why,lessons:[{t,done}],notes:[{date,text}],docs:[{id,name,date}],links,imgs,created}`.
+- Study sessions are `tasks` with `course` (course id), `topic`, `dur` (minutes) and `series` when repeated, so they show on the Today calendar, agenda and Planner like any task.
 
 - `clients` / `projects`: fields plus `docs:[{id,name,kind,date}]`, `links:[{t,u,date}]`, `imgs:[{id,name,date}]`. Projects carry `client` (id or empty).
 - `tasks`: `{date,text,time,done,goal?,project?}`.

@@ -42,7 +42,8 @@ Collections (`COLLS`): courses, goals, skills, improve, log, resources, paths, h
 Selected record shapes:
 
 - `skills`: `{name,does,gap,area,status:needed|building|have,prep:[{t,done}],built,tests:[bool,bool],startedAt,haveAt}`. `prep` is made from `gap` when building starts (`skPrep`); `skPrompt` builds the prompt to paste into a Claude chat.
-- `courses`: `{name,provider,url,status:active|paused|done,target,next,why,lessons:[{t,done}],notes:[{date,text}],docs:[{id,name,date}],links,imgs,chats:[{q,a,date,saved}],created}`. `chats` keeps the last 20 Ask Claude answers (`coAsk` sends the course details, lessons and newest notes as context).
+- `courses`: `{name,provider,url,status:active|paused|done,target,next,why,lessons:[{id,t,done}] (shown as Modules),notes:[{id,date,title,text,mod}] (mod = module id, empty for General),docs:[{id,name,date}],links,imgs,chats:[{q,a,date,saved}],created}`. `chats` keeps the last 20 Ask Claude answers (`coAsk` sends the course details, lessons and newest notes as context).
+- Older lessons/notes without ids get `L<i>`/`N<i>` ids on first edit (`coFix`); `coEdit(cid,fn)` clones, fixes ids, applies `fn` and writes in one go. `ui.cnote` opens a note full screen (`vCNote`).
 - Study sessions are `tasks` with `course` (course id), `topic`, `dur` (minutes) and `series` when repeated, so they show on the Today calendar, agenda and Planner like any task.
 
 - `clients` / `projects`: fields plus `docs:[{id,name,kind,date}]`, `links:[{t,u,date}]`, `imgs:[{id,name,date}]`. Projects carry `client` (id or empty).

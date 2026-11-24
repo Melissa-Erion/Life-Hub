@@ -541,6 +541,17 @@ details.earlier .chat{margin-top:10px}
 .skprompt{width:100%;font-size:.82rem;line-height:1.4}
 details.howto summary{cursor:pointer;font-weight:700}
 details.howto ol{margin:10px 0 6px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+/* Course modules and note cards */
+ul.check.modlist li{align-items:center}
+.modlist input.modname{flex:1 1 auto;min-width:0;width:auto;height:auto;margin-top:0;accent-color:auto;background:transparent;border:1px solid transparent;border-radius:8px;padding:4px 6px;font:inherit;color:var(--ink)}
+.modlist input.modname:hover{border-color:var(--line)}
+.modlist input.modname:focus{border-color:var(--ink);background:var(--field);outline:0}
+.modlist input.modname.done{color:var(--muted);text-decoration:line-through}
+.modlist .btn.ghost{padding:2px 8px;flex:none}
+.cnadd{height:170px;border:1px dashed var(--line);border-radius:14px;background:transparent;color:var(--muted);font:inherit;font-weight:600;cursor:pointer}
+.cnadd:hover{border-color:var(--ink);color:var(--ink)}
+.cnadd.slim{height:48px}
+.modlist input[type=checkbox]{margin-top:0}
 </style>
 </head>
 <body>
@@ -1670,7 +1681,7 @@ function coAsk(id,label,req){
   var c=S.courses[id];if(!ask||!c||(ui.coAI&&ui.coAI.loading))return;
   ui.coAI={cid:id,loading:true,q:label};render();
   var l=courseLessons(c);
-  var ctx="Course: "+c.name+(c.provider?" ("+c.provider+")":"")+"\nWhy I am taking it: "+(c.why||"not given")+"\nWhere I left off: "+(c.next||"not given")+"\nLessons done: "+(l.filter(function(x){return x.done}).map(function(x){return x.t}).join("; ")||"none yet")+"\nLessons still to do: "+(l.filter(function(x){return !x.done}).map(function(x){return x.t}).join("; ")||"none listed")+"\nMy notes, newest first:\n"+((c.notes||[]).slice(-15).reverse().map(function(n){return"- "+(n.date||"")+": "+String(n.text||"").slice(0,600)}).join("\n")||"none yet");
+  var ctx="Course: "+c.name+(c.provider?" ("+c.provider+")":"")+"\nWhy I am taking it: "+(c.why||"not given")+"\nWhere I left off: "+(c.next||"not given")+"\nLessons done: "+(l.filter(function(x){return x.done}).map(function(x){return x.t}).join("; ")||"none yet")+"\nLessons still to do: "+(l.filter(function(x){return !x.done}).map(function(x){return x.t}).join("; ")||"none listed")+"\nMy notes, newest first:\n"+(coNotes(c).slice(-15).reverse().map(function(n){var mm=coMods(c).filter(function(m){return m.id===n.mod})[0];return"- "+(n.date||"")+" ["+(mm?mm.t:"General")+"] "+(n.title?n.title+": ":"")+String(n.text||"").slice(0,600)}).join("\n")||"none yet");
   var p="You are a patient, practical study coach helping me with a course I am taking. Today is "+today()+". Use the course details and my notes below. Write in plain language with short paragraphs or simple numbered lists. Do not use markdown symbols such as # or **. If my notes do not cover something, answer from general knowledge and say so in one short line. Keep it under 300 words unless I ask for more.\n\n"+ctx+"\n\nMy request: "+req;
   ask(p,{cache:false}).then(function(r){
     var t=String(r&&r.text||"").trim();
@@ -1680,18 +1691,44 @@ function coAsk(id,label,req){
     write("courses",id,cc).then(function(){ui.coAI=null;render()});
   },function(e){ui.coAI={cid:id,error:failMsg(e)};render()});
 }
+/* ---------- Course modules and notes ---------- */
+function coMods(c){return(c.lessons||[]).map(function(x,i){return{id:x.id||("L"+i),t:x.t,done:!!x.done,i:i}})}
+function coNotes(c){return(c.notes||[]).map(function(n,i){return{id:n.id||("N"+i),i:i,date:n.date||"",title:n.title||"",text:n.text||"",mod:n.mod||""}})}
+function coFix(c){(c.lessons||[]).forEach(function(x,i){if(!x.id)x.id="L"+i});(c.notes||[]).forEach(function(n,i){if(!n.id)n.id="N"+i});return c}
+function coEdit(cid,fn){var c=S.courses[cid]&&coFix(clone(S.courses[cid]));if(!c)return Promise.resolve(false);fn(c);return write("courses",cid,c)}
+function noteTitle(n){var t=String(n.title||"").trim();if(t)return t;var f=String(n.text||"").trim().split("\n")[0];return f?f.slice(0,60):"Untitled note"}
+function noteGroups(c){var mods=coMods(c),notes=coNotes(c),ids=mods.map(function(m){return m.id});var g=mods.map(function(m){return{id:m.id,t:m.t,items:notes.filter(function(n){return n.mod===m.id})}});var gen=notes.filter(function(n){return !n.mod||ids.indexOf(n.mod)<0});if(gen.length||!mods.length)g.push({id:"",t:"General notes",items:gen});return g}
+function modulesHtml(c,id){
+  var mods=coMods(c),dn=mods.filter(function(m){return m.done}).length;
+  var h=vh("Modules",dn+" of "+mods.length+" done");
+  h+='<div class="card">'+(mods.length?'<div class="bar"><i style="width:'+coursePct(c)+'%"></i></div><ul class="check modlist" style="margin-top:8px">'+mods.map(function(m,i){return'<li><input type="checkbox"'+(m.done?" checked":"")+' data-act="ls-done" data-id="'+id+'" data-i="'+m.i+'" aria-label="Done: '+esc(m.t)+'"><input type="text" class="modname'+(m.done?" done":"")+'" value="'+esc(m.t)+'" data-modrn="'+id+'" data-mid="'+m.id+'" aria-label="Module name"><button class="btn ghost" aria-label="Move up" data-act="mod-mv" data-id="'+id+'" data-mid="'+m.id+'" data-d="-1"'+(i===0?" disabled":"")+'>↑</button><button class="btn ghost" aria-label="Move down" data-act="mod-mv" data-id="'+id+'" data-mid="'+m.id+'" data-d="1"'+(i===mods.length-1?" disabled":"")+'>↓</button><button class="btn ghost" aria-label="Remove module" data-act="mod-rm" data-id="'+id+'" data-mid="'+m.id+'">'+(ui.confirm==="cmr/"+id+"/"+m.id?"Confirm":"×")+'</button></li>'}).join("")+'</ul>':'<p class="muted">Add the modules or lessons of this course. Your notes are organised under them.</p>')+'<form class="add" data-form="lesson" data-id="'+id+'"><input type="text" id="ls-t" class="keep" placeholder="Module name, for example Module 1: Getting started" aria-label="Module name" style="flex:1 1 220px"><button class="btn" type="submit">Add module</button></form></div>';
+  return h;
+}
+function notesHtml(c,id){
+  var gs=noteGroups(c),total=coNotes(c).length;
+  var h=vh("Notes",total+" note"+(total===1?"":"s")+" · grouped by module");
+  h+='<div class="card">'+gs.map(function(g){return'<div class="lvl" style="margin:8px 0 2px">'+esc(g.t)+' · '+g.items.length+' note'+(g.items.length===1?"":"s")+'</div><div class="grid g3 fill">'+g.items.map(function(n){return'<button class="mini jentry" data-act="cn-open" data-id="'+id+'" data-n="'+n.id+'"><b>'+esc(noteTitle(n))+'</b><span class="jprev small">'+esc(String(n.text||"").trim()||"No text yet")+'</span><span class="small muted">'+esc(n.date?fmt(n.date,{month:"short",day:"numeric",year:"numeric"}):"")+'</span></button>'}).join("")+'<button class="cnadd'+(g.items.length?"":" slim")+'" data-act="cn-new" data-id="'+id+'" data-mod="'+g.id+'">+ Add note</button></div>'}).join("")+'</div>';
+  return h;
+}
+function vCNote(c,cid,nid){
+  var ns=coNotes(c),n=null;ns.forEach(function(x){if(x.id===nid)n=x});
+  if(!n){ui.cnote=null;return vCourse(c,cid)}
+  var mods=coMods(c),same=ns.filter(function(x){return(x.mod||"")===(n.mod||"")||(!x.mod&&!mods.some(function(m){return m.id===n.mod}))}),pos=same.map(function(x){return x.id}).indexOf(nid),prev=same[pos-1],next=same[pos+1],mname=(mods.filter(function(m){return m.id===n.mod})[0]||{t:"General notes"}).t;
+  var h='<div><button class="btn ghost back" data-act="cn-close" data-id="'+cid+'" data-n="'+nid+'">← Back to '+esc(c.name)+'</button></div>';
+  h+='<div class="spread" style="align-items:center"><div class="head"><h1 style="overflow-wrap:anywhere">'+esc(noteTitle(n))+'</h1><p class="muted">'+esc(mname)+(n.date?' · '+esc(fmt(n.date,{month:"short",day:"numeric",year:"numeric"})):"")+'</p></div><div class="row"><button class="btn" data-act="cn-open" data-id="'+cid+'" data-n="'+(prev?prev.id:"")+'"'+(prev?"":" disabled")+'>← Previous note</button><button class="btn" data-act="cn-open" data-id="'+cid+'" data-n="'+(next?next.id:"")+'"'+(next?"":" disabled")+'>Next note →</button></div></div>';
+  h+='<div class="card"><div class="row">'+coF("cnt-"+nid,"Title",'<input type="text" id="cnt-'+nid+'" class="keep" data-cnf="title" data-cid="'+cid+'" data-nid="'+nid+'" value="'+esc(n.title)+'" placeholder="For example Key ideas from video 2">',"2 1 240px")+coF("cnm-"+nid,"Module",'<select id="cnm-'+nid+'" data-cnf="mod" data-cid="'+cid+'" data-nid="'+nid+'"><option value="">General notes</option>'+mods.map(function(m){return'<option value="'+m.id+'"'+(m.id===n.mod?" selected":"")+'>'+esc(m.t)+'</option>'}).join("")+'</select>',"1 1 200px")+'</div><div class="f"><label for="cnx-'+nid+'">Notes</label><textarea id="cnx-'+nid+'" class="keep cntext" data-cnf="text" data-cid="'+cid+'" data-nid="'+nid+'" style="min-height:320px" placeholder="Key ideas, examples, questions, things to try">'+esc(n.text)+'</textarea></div></div>';
+  h+='<div><button class="btn danger" data-act="cn-del" data-id="'+cid+'" data-n="'+nid+'">'+(ui.confirm==="cnd/"+cid+"/"+nid?"Confirm: delete this note":"Delete this note")+'</button></div>';
+  return h;
+}
 function vCourse(c,id){
+  if(ui.cnote)return vCNote(c,id,ui.cnote);
   var td=today(),l=courseLessons(c),dn=l.filter(function(x){return x.done}).length,docs=c.docs||[],st=studyTasks(id),up=st.filter(function(t){return !t.done&&t.date>=td}).sort(byWhen),done=st.filter(function(t){return t.done}),cu=coUrl(c.url);
   var h='<div><button class="btn ghost back" data-act="co-close">← Back to courses</button></div>';
-  h+='<div class="head"><h1 style="overflow-wrap:anywhere">'+esc(c.name)+'</h1><p class="muted">'+esc(c.provider||"Course")+' · '+dn+' of '+l.length+' lessons done · '+hrs(studyMins(done))+' studied</p></div>';
+  h+='<div class="head"><h1 style="overflow-wrap:anywhere">'+esc(c.name)+'</h1><p class="muted">'+esc(c.provider||"Course")+' · '+dn+' of '+l.length+' modules done · '+hrs(studyMins(done))+' studied</p></div>';
   h+=vh("Details","Saves when you click outside a box");
   h+='<div class="card"><div class="row">'+coF("cx-name","Name",'<input type="text" id="cx-name" data-doc="courses/'+id+'" data-f="name" value="'+esc(c.name)+'">',"2 1 220px")+coF("cx-prov","Provider",'<input type="text" id="cx-prov" data-doc="courses/'+id+'" data-f="provider" value="'+esc(c.provider||"")+'">',"1 1 160px")+coF("cx-status","Status",'<select id="cx-status" data-doc="courses/'+id+'" data-f="status">'+CST.map(function(s){return'<option'+((c.status||"active")===s?" selected":"")+'>'+s+'</option>'}).join("")+'</select>',"0 1 140px")+coF("cx-target","Finish by",'<input type="date" id="cx-target" data-doc="courses/'+id+'" data-f="target" value="'+esc(c.target||"")+'">',"0 1 160px")+coF("cx-url","Course link",'<input type="text" inputmode="url" id="cx-url" data-doc="courses/'+id+'" data-f="url" value="'+esc(c.url||"")+'" placeholder="https://">',"1 1 100%")+coF("cx-next","Where I left off",'<input type="text" id="cx-next" data-doc="courses/'+id+'" data-f="next" value="'+esc(c.next||"")+'" placeholder="For example Module 3, video 2">',"1 1 100%")+coF("cx-why","Why I am taking it",'<textarea id="cx-why" data-doc="courses/'+id+'" data-f="why" rows="2" placeholder="What you want to be able to do at the end">'+esc(c.why||"")+'</textarea>',"1 1 100%")+'</div>'+(cu?'<p class="small"><a href="'+esc(cu)+'" target="_blank" rel="noopener">Open the course</a></p>':"")+'</div>';
-  h+=vh("Lessons",dn+" of "+l.length+" done");
-  h+='<div class="card">'+(l.length?'<div class="bar"><i style="width:'+coursePct(c)+'%"></i></div><ul class="check" style="margin-top:8px">'+l.map(function(x,i){return'<li><input type="checkbox"'+(x.done?" checked":"")+' data-act="ls-done" data-id="'+id+'" data-i="'+i+'" aria-label="Done: '+esc(x.t)+'"><span class="t'+(x.done?" done":"")+'">'+esc(x.t)+'</span><button class="btn ghost" aria-label="Remove lesson" data-act="co-rm" data-k="lessons" data-id="'+id+'" data-i="'+i+'">'+(ui.confirm==="cor/lessons/"+id+"/"+i?"Confirm":"×")+'</button></li>'}).join("")+'</ul>':'<p class="muted">List the lessons or modules so you can tick them off as you go.</p>')+'<form class="add" data-form="lesson" data-id="'+id+'"><input type="text" id="ls-t" class="keep" placeholder="Lesson or module name" aria-label="Lesson name" style="flex:1 1 220px"><button class="btn" type="submit">Add lesson</button></form></div>';
-  h+=vh("Notes",(c.notes||[]).length+" saved");
-  h+='<div class="card"><form class="add" data-form="cnote" data-id="'+id+'"><div class="f" style="flex:1 1 100%"><label for="cn-text">New note</label><textarea id="cn-text" class="keep" rows="4" placeholder="Key ideas, questions, things to try"></textarea></div><button class="btn primary" type="submit">Add note</button></form>';
-  h+=(c.notes||[]).length?'<div class="grid g2">'+(c.notes||[]).map(function(n,i){return{n:n,i:i}}).reverse().map(function(o){return'<div class="mini"><div class="spread" style="align-items:center"><span class="small muted">'+esc(o.n.date?fmt(o.n.date,{weekday:"short",month:"short",day:"numeric",year:"numeric"}):"")+'</span><button class="btn ghost" aria-label="Remove note" data-act="co-rm" data-k="notes" data-id="'+id+'" data-i="'+o.i+'">'+(ui.confirm==="cor/notes/"+id+"/"+o.i?"Confirm":"×")+'</button></div><textarea rows="4" aria-label="Note" data-cnote="'+id+'" data-i="'+o.i+'">'+esc(o.n.text||"")+'</textarea></div>'}).join("")+'</div>':'<p class="muted">No notes yet.</p>';
-  h+='</div>';
+  h+=modulesHtml(c,id);
+  h+=notesHtml(c,id);
   h+=courseAI(c,id);
   h+=vh("Study plan",up.length+" upcoming · shows on your calendar");
   h+='<div class="card">'+studyForm(id)+studyList(up)+'</div>';
@@ -1719,7 +1756,7 @@ function render(){
   var NAMES={study:"Learning",money:"Money",find:"Search",data:"Backup",fit:"Fitness",biz:"Business",plan:"Planner",today:"Today",goals:"Goals",areas:"Explore",claude:"Claude",log:"Journal",learn:"Library"};
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
-  view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
+  view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal],textarea[data-cnf]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
   if(ui.scrollTo){var se=document.getElementById(ui.scrollTo);ui.scrollTo=null;if(se&&se.scrollIntoView)se.scrollIntoView({block:"start"})}
   Object.keys(keep).forEach(function(id){var e=document.getElementById(id);if(e&&keep[id]!==""){e.value=keep[id]}});
   var subSel=document.getElementById("ng-sub");if(subSel&&keep["ng-area"]!==undefined){subSel.innerHTML=subOptions(val("ng-area"),keep["ng-sub"]||"")}
@@ -1765,7 +1802,7 @@ view.addEventListener("submit",function(ev){
   else if(k==="act"){write("acts",newId(),{date:val("ac-date")||today(),type:val("ac-type")||"admin",note:val("ac-note")});document.getElementById("ac-note").value=""}
   else if(k==="pl-top"){var pk=f.getAttribute("data-key"),pi2=document.getElementById("pt-"+pk),pv2=pi2.value.trim();if(!pv2)return;pi2.value="";savePlan(pk,function(d){d.top=d.top||[];if(d.top.length<3)d.top.push({t:pv2,done:false})})}
   else if(k==="course"){var cn=val("co-name");if(!cn)return;write("courses",newId(),{name:cn,provider:val("co-prov"),url:val("co-url"),target:val("co-target"),status:"active",lessons:[],notes:[],docs:[],links:[],imgs:[],next:"",why:"",created:today()});["co-name","co-prov","co-url","co-target"].forEach(function(i){var el=document.getElementById(i);if(el)el.value=""});flash("Course added.")}
-  else if(k==="lesson"){var lt2=val("ls-t");if(!lt2||!S.courses[id])return;document.getElementById("ls-t").value="";var lc=clone(S.courses[id]);(lc.lessons=lc.lessons||[]).push({t:lt2,done:false});savedNote(write("courses",id,lc))}
+  else if(k==="lesson"){var lt2=val("ls-t");if(!lt2||!S.courses[id])return;document.getElementById("ls-t").value="";savedNote(coEdit(id,function(lc){(lc.lessons=lc.lessons||[]).push({id:"m"+newId(),t:lt2,done:false})}))}
   else if(k==="cnote"){var cnt=document.getElementById("cn-text"),cnv=cnt&&cnt.value.trim();if(!cnv||!S.courses[id])return;cnt.value="";var nc=clone(S.courses[id]);(nc.notes=nc.notes||[]).push({date:today(),text:cnv});savedNote(write("courses",id,nc))}
   else if(k==="co-ask"){var qa=document.getElementById("ca-q"),qv=qa&&qa.value.trim();if(!qv)return;qa.value="";coAsk(id,qv,qv)}
   else if(k==="study"){var scid=id||val("st-course"),sc=S.courses[scid];if(!sc)return;var sd1=val("st-date")||today(),rp2=val("st-rep"),tp=val("st-topic"),dts2=[sd1],ssid=newId();if(rp2){var rn3=parseInt(rp2.slice(1),10);for(var r3=1;r3<rn3;r3++)dts2.push(addDays(sd1,(rp2[0]==="w"?7:1)*r3))}var tpe=document.getElementById("st-topic");if(tpe)tpe.value="";writeSeq(dts2.map(function(dx){return["tasks",newId(),{date:dx,text:"Study: "+sc.name+(tp?" · "+tp:""),topic:tp,course:scid,time:val("st-time"),dur:val("st-dur")||"60",goal:"",done:false,series:rp2?ssid:""}]})).then(function(){ui.msg=dts2.length>1?"Planned "+dts2.length+" study sessions. They are on your calendar.":"Planned. It is on your calendar on "+sd1+".";render()})}
@@ -1812,7 +1849,9 @@ view.addEventListener("change",function(ev){
   if(e.hasAttribute("data-soc")){var sid=e.getAttribute("data-soc"),sp=e.getAttribute("data-sp").split(".");savedNote(socSave(sid,function(d){var o=d;for(var si=0;si<sp.length-1;si++){if(o[sp[si]]==null)o[sp[si]]={};o=o[sp[si]]}o[sp[sp.length-1]]=e.value}));return}
 if(e.hasAttribute("data-socprof")){var rpid=e.getAttribute("data-socprof"),rpn=e.value.trim();if(!rpn){render();return}savePlan("social",function(d){d.profiles=socProfiles().map(function(x){return x.id===rpid?{id:x.id,name:rpn}:x})});return}
 if(e.hasAttribute("data-doc")){var dp=e.getAttribute("data-doc").split("/"),df=e.getAttribute("data-f"),cur0=S[dp[0]]&&S[dp[0]][dp[1]];if(!cur0||(cur0[df]||"")===e.value)return;if(dp[0]==="routines"&&df==="name"&&!e.value.trim()){render();return}var nd=clone(cur0);nd[df]=e.value;savedNote(write(dp[0],dp[1],nd));if(dp[0]==="routines")syncRoutine(dp[1],nd);return}
-  if(e.hasAttribute("data-cnote")){var ncid=e.getAttribute("data-cnote"),nci=+e.getAttribute("data-i"),ncc=S.courses[ncid]&&clone(S.courses[ncid]);if(!ncc||!ncc.notes||!ncc.notes[nci]||ncc.notes[nci].text===e.value)return;ncc.notes[nci].text=e.value;savedNote(write("courses",ncid,ncc));return}
+  if(e.hasAttribute("data-modrn")){var rcid=e.getAttribute("data-modrn"),rmid=e.getAttribute("data-mid"),rnv=e.value.trim();if(!rnv){render();return}savedNote(coEdit(rcid,function(c){(c.lessons||[]).forEach(function(x){if(x.id===rmid)x.t=rnv})}));return}
+if(e.hasAttribute("data-cnf")){var fcid=e.getAttribute("data-cid"),fnid=e.getAttribute("data-nid"),ff=e.getAttribute("data-cnf"),fv=e.value;savedNote(coEdit(fcid,function(c){(c.notes||[]).forEach(function(x){if(x.id===fnid)x[ff]=fv})}));if(ff==="mod")render();return}
+if(e.hasAttribute("data-cnote")){var ncid=e.getAttribute("data-cnote"),nci=+e.getAttribute("data-i"),ncc=S.courses[ncid]&&clone(S.courses[ncid]);if(!ncc||!ncc.notes||!ncc.notes[nci]||ncc.notes[nci].text===e.value)return;ncc.notes[nci].text=e.value;savedNote(write("courses",ncid,ncc));return}
 if(e.hasAttribute("data-plan")){var ppk=e.getAttribute("data-plan"),ppf=e.getAttribute("data-pf"),ppv=e.value;if((pdoc(ppk)[ppf]||"")===ppv)return;savedNote(savePlan(ppk,function(d){d[ppf]=ppv}));return}
   if(e.hasAttribute("data-journal")){var jd=e.getAttribute("data-journal"),jt=e.value;if((S.journal[jd]&&S.journal[jd].text||"")===jt)return;if(!jt.trim()&&!S.journal[jd])return;savedNote(write("journal",jd,{date:jd,text:jt}));ui.saved=new Date().toLocaleTimeString("en-CA",{hour:"2-digit",minute:"2-digit"});return}
   if(e.hasAttribute("data-inv")){var iid=e.getAttribute("data-inv"),ix=clone(S.invoices[iid]),was=ix.status;ix.status=e.value;
@@ -1838,7 +1877,7 @@ if(a==="g-check"){var gg=goal(did),key=e.getAttribute("data-list"),i=+e.getAttri
 
 view.addEventListener("click",function(ev){
   var b=ev.target.closest("button[data-act]");
-  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"))){ui.confirm=null;if(!b){render();return}}
+  if(ui.confirm&&!(b&&(b.getAttribute("data-act")==="del"||b.getAttribute("data-act")==="t-rmarea"||b.getAttribute("data-act")==="rt-del"||b.getAttribute("data-act")==="rt-clear"||b.getAttribute("data-act")==="co-rm"||b.getAttribute("data-act")==="co-ai-rm"||b.getAttribute("data-act")==="mod-rm"||b.getAttribute("data-act")==="cn-del"||b.getAttribute("data-act")==="co-del"||b.getAttribute("data-act")==="st-del"||b.getAttribute("data-act")==="st-del-rest"||b.getAttribute("data-act")==="w-del-rest"||b.getAttribute("data-act")==="k-del-rest"||b.getAttribute("data-act")==="k-del-one"||b.getAttribute("data-act")==="doc-rm"||b.getAttribute("data-act")==="pj-del"||b.getAttribute("data-act")==="pdoc-rm"||b.getAttribute("data-act")==="att-rm"||b.getAttribute("data-act").indexOf("soc-")===0||b.getAttribute("data-act")==="trash-empty"))){ui.confirm=null;if(!b){render();return}}
   if(!b)return;
   var a=b.getAttribute("data-act"),id=b.getAttribute("data-id");
   if(a==="back"){var pv=ui.prev;ui.prev=null;ui.skipPrev=true;location.hash="#"+(pv||"today");return}
@@ -1892,16 +1931,22 @@ if(a==="sk-show"){ui.skShow=ui.skShow===id?null:id;render();return}
 if(a==="sk-copy"){var sc=S.skills[id];if(!sc)return;var spt=skPrompt(sc),sfb=function(){ui.skShow=id;render();flash("Copy the prompt from the box below.")};try{navigator.clipboard.writeText(spt).then(function(){flash("Prompt copied. Paste it into a Claude chat and attach what you gathered.")},sfb)}catch(x){sfb()}return}
 if(a==="sk-rank"){skRank();return}
 if(a==="j-close"){ui.jday=null;render();window.scrollTo(0,0);return}
-if(a==="co-open"){ui.course=id;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
+if(a==="co-open"){ui.course=id;ui.cnote=null;ui.confirm=null;if(location.hash!=="#study")location.hash="#study";else render();window.scrollTo(0,0);return}
 if(a==="co-ai"){var qk=b.getAttribute("data-k");if(COAI[qk])coAsk(id,COAI[qk][0],COAI[qk][1]);return}
-if(a==="co-ai-save"){var asi=+b.getAttribute("data-i"),acc=S.courses[id]&&clone(S.courses[id]);if(!acc||!acc.chats||!acc.chats[asi])return;var ach=acc.chats[asi];(acc.notes=acc.notes||[]).push({date:today(),text:"From Claude, "+ach.q+":\n"+ach.a});ach.saved=true;savedNote(write("courses",id,acc));return}
+if(a==="co-ai-save"){var asi=+b.getAttribute("data-i"),acc=S.courses[id]&&clone(S.courses[id]);if(!acc||!acc.chats||!acc.chats[asi])return;var ach=acc.chats[asi];coFix(acc);(acc.notes=acc.notes||[]).push({id:"n"+newId(),date:today(),title:("From Claude: "+ach.q).slice(0,80),text:ach.a,mod:""});ach.saved=true;savedNote(write("courses",id,acc));return}
 if(a==="co-ai-rm"){var ari=+b.getAttribute("data-i"),ark="coai/"+id+"/"+ari;if(ui.confirm!==ark){ui.confirm=ark;render();return}ui.confirm=null;var arc=S.courses[id]&&clone(S.courses[id]);if(arc&&arc.chats){arc.chats.splice(ari,1);write("courses",id,arc)}render();return}
-if(a==="co-close"){ui.course=null;render();window.scrollTo(0,0);return}
+if(a==="cn-open"){var cnn=b.getAttribute("data-n");if(!cnn)return;ui.cnote=cnn;ui.confirm=null;render();window.scrollTo(0,0);return}
+if(a==="cn-new"){var nnid="n"+newId(),nmod=b.getAttribute("data-mod")||"";coEdit(id,function(c){(c.notes=c.notes||[]).push({id:nnid,date:today(),title:"",text:"",mod:nmod})}).then(function(ok){if(ok){ui.cnote=nnid;render();window.scrollTo(0,0);var ct=document.querySelector("#view textarea.cntext");if(ct)ct.focus()}});return}
+if(a==="cn-close"){var ccn=b.getAttribute("data-n"),ctt=document.querySelector("#view [data-cnf=title]"),ctx=document.querySelector("#view textarea.cntext"),empty=ctt&&ctx&&!ctt.value.trim()&&!ctx.value.trim();ui.cnote=null;if(empty)coEdit(id,function(c){c.notes=(c.notes||[]).filter(function(x){return x.id!==ccn})});render();window.scrollTo(0,0);return}
+if(a==="cn-del"){var dcn=b.getAttribute("data-n"),dk3="cnd/"+id+"/"+dcn;if(ui.confirm!==dk3){ui.confirm=dk3;render();return}ui.confirm=null;ui.cnote=null;coEdit(id,function(c){c.notes=(c.notes||[]).filter(function(x){return x.id!==dcn})}).then(function(ok){if(ok)flash("Note deleted.")});render();return}
+if(a==="mod-mv"){var mmid=b.getAttribute("data-mid"),mmd=+b.getAttribute("data-d");coEdit(id,function(c){var L=c.lessons||[],ix=-1;L.forEach(function(x,i){if(x.id===mmid)ix=i});var jx=ix+mmd;if(ix<0||jx<0||jx>=L.length)return;var t=L[ix];L[ix]=L[jx];L[jx]=t});return}
+if(a==="mod-rm"){var rmd=b.getAttribute("data-mid"),rk2="cmr/"+id+"/"+rmd;if(ui.confirm!==rk2){ui.confirm=rk2;render();return}ui.confirm=null;coEdit(id,function(c){c.lessons=(c.lessons||[]).filter(function(x){return x.id!==rmd});(c.notes||[]).forEach(function(x){if(x.mod===rmd)x.mod=""})}).then(function(ok){if(ok)flash("Module removed. Its notes moved to General notes.")});render();return}
+if(a==="co-close"){ui.cnote=null;ui.course=null;render();window.scrollTo(0,0);return}
 if(a==="co-rm"){var cok=b.getAttribute("data-k"),coi=+b.getAttribute("data-i"),cokey="cor/"+cok+"/"+id+"/"+coi;if(ui.confirm!==cokey){ui.confirm=cokey;render();return}ui.confirm=null;var coc=S.courses[id]&&clone(S.courses[id]);if(coc&&coc[cok]){coc[cok].splice(coi,1);write("courses",id,coc)}render();return}
 if(a==="co-del"){if(ui.confirm!=="codel/"+id){ui.confirm="codel/"+id;render();return}ui.confirm=null;var cup=studyTasks(id).filter(function(t){return !t.done&&t.date>=today()});ui.course=null;remove("courses",id);rmAll("tasks",cup);render();return}
 if(a==="st-del"){if(ui.confirm!=="std/"+id){ui.confirm="std/"+id;render();return}ui.confirm=null;remove("tasks",id);render();return}
 if(a==="st-del-rest"){var stt=S.tasks[id];if(!stt)return;if(ui.confirm!=="stdr/"+id){ui.confirm="stdr/"+id;render();return}ui.confirm=null;var str2=taskRest(stt);rmAll("tasks",str2).then(function(){ui.msg="Deleted "+str2.length+" study sessions.";render()});render();return}
-if(a==="pl-save"){var pcd=b.closest(".card"),pgrp={},pps=[];if(pcd){pcd.querySelectorAll("[data-plan][data-pf]").forEach(function(x){var k2=x.getAttribute("data-plan");(pgrp[k2]=pgrp[k2]||{})[x.getAttribute("data-pf")]=x.value});Object.keys(pgrp).forEach(function(k2){var ch=Object.keys(pgrp[k2]).some(function(f2){return(pdoc(k2)[f2]||"")!==pgrp[k2][f2]});if(ch)pps.push(savePlan(k2,function(d){Object.keys(pgrp[k2]).forEach(function(f2){d[f2]=pgrp[k2][f2]})}))});pcd.querySelectorAll("[data-journal]").forEach(function(x){var jd2=x.getAttribute("data-journal"),jt2=x.value;if((S.journal[jd2]&&S.journal[jd2].text||"")!==jt2&&(jt2.trim()||S.journal[jd2]))pps.push(write("journal",jd2,{date:jd2,text:jt2}))})}Promise.all(pps).then(function(r){if(r.every(function(x){return x!==false}))flash("Saved")});return}
+if(a==="pl-save"){var pcd=b.closest(".card"),pgrp={},pps=[];if(pcd){pcd.querySelectorAll("[data-plan][data-pf]").forEach(function(x){var k2=x.getAttribute("data-plan");(pgrp[k2]=pgrp[k2]||{})[x.getAttribute("data-pf")]=x.value});Object.keys(pgrp).forEach(function(k2){var ch=Object.keys(pgrp[k2]).some(function(f2){return(pdoc(k2)[f2]||"")!==pgrp[k2][f2]});if(ch)pps.push(savePlan(k2,function(d){Object.keys(pgrp[k2]).forEach(function(f2){d[f2]=pgrp[k2][f2]})}))});pcd.querySelectorAll("[data-journal]").forEach(function(x){var jd2=x.getAttribute("data-journal"),jt2=x.value;if((S.journal[jd2]&&S.journal[jd2].text||"")!==jt2&&(jt2.trim()||S.journal[jd2]))pps.push(write("journal",jd2,{date:jd2,text:jt2}))})}var cnfs=pcd?pcd.querySelectorAll("[data-cnf]"):[];if(cnfs.length){var cfc=cnfs[0].getAttribute("data-cid"),cfn=cnfs[0].getAttribute("data-nid");pps.push(coEdit(cfc,function(c){(c.notes||[]).forEach(function(x){if(x.id===cfn)[].forEach.call(cnfs,function(el){x[el.getAttribute("data-cnf")]=el.value})})}))}Promise.all(pps).then(function(r){if(r.every(function(x){return x!==false}))flash("Saved")});return}
 if(a==="fmn"){var fmn=+b.getAttribute("data-n");ui.fm=fmn===0?0:(ui.fm||0)+fmn;render();return}
 if(a==="fw"){var fn2=+b.getAttribute("data-n");ui.fw=fn2===0?0:ui.fw+fn2;render();return}
   if(a==="nd"){var nn2=+b.getAttribute("data-n");ui.nd=nn2===0?0:ui.nd+nn2;render();return}
@@ -2009,7 +2054,7 @@ function review(){
 lastView=current();
 window.addEventListener("hashchange",function(){var c=current();if(ui.skipPrev){ui.skipPrev=false;ui.prev=null}else if(c!==lastView){ui.prev=lastView}lastView=c;ui.confirm=null;var keepScroll=!!ui.scrollTo;render();if(!keepScroll)window.scrollTo(0,0)});
 
-document.addEventListener("click",function(ev){var l=ev.target.closest&&ev.target.closest('nav a[href^="#"], #sheet a[href^="#"]');if(!l)return;var hh=l.getAttribute("href"),rs=false;if(hh==="#log"&&ui.jday){ui.jday=null;rs=true}if(hh==="#study"&&ui.course){ui.course=null;rs=true}if(rs&&location.hash===hh)render()});
+document.addEventListener("click",function(ev){var l=ev.target.closest&&ev.target.closest('nav a[href^="#"], #sheet a[href^="#"]');if(!l)return;var hh=l.getAttribute("href"),rs=false;if(hh==="#log"&&ui.jday){ui.jday=null;rs=true}if(hh==="#study"&&ui.course){ui.course=null;ui.cnote=null;rs=true}if(rs&&location.hash===hh)render()});
 document.querySelector("nav").addEventListener("click",function(ev){var l=ev.target.closest("a");if(l&&l.getAttribute("href")!=="#"+current())ui.skipPrev=true});
 
 /* ---------- theme ---------- */

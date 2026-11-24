@@ -102,8 +102,9 @@ Shared data lives in `shared_docs` (space_id, coll, id, data) and is reached thr
 | `f_chores` | `{name, who:personId, freq:"daily"|"weekly"|"biweekly"|"monthly", day, notes, log:{periodKey:{by,byName,date}}, last}`; `chKey()` gives the current period key, so ticks reset by themselves |
 | `f_todos` | `{text, who, due, done, doneAt, doneBy, doneByName}`; dated ones show on the calendar |
 | `f_maint` | `{name, area, every (months), month (best month, optional), last, who, notes, hist:[{date,by,byName}]}`; `mNext()` and `mState()` work out the next due date |
+| `f_goals` | `{title, area, target, due, why, status:"active"|"paused"|"done", steps:[{t, done, who:personId, doneBy, doneByName, doneAt}], milestones:[{t, done}]}`; combined goals both members edit |
 | `f_feedback` | `{kind:"bug"|"idea", page, text, by, byName, date, at, status, reply, device, width}`; the space owner sets status and reply |
 
 Personal goals with `shared:true` are readable by family members (RLS policy on `docs`) and appear in `S.pgoals`.
 
-Pages: `#family` (tabs Overview, Chores, Home upkeep, Habits, Calendar, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.
+Pages: `#family` (tabs Overview, Goals, Chores, Home upkeep, Habits, Calendar, People and pets; `ui.fam`) and `#help` (Feedback, with the tour button). The tour is `TOUR` (hash, title, text); it starts by itself once for an empty new account and records `plans/tour.done`.

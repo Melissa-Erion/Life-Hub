@@ -590,6 +590,10 @@ label.gshare{gap:8px;align-items:center}
 label.gshare input{width:17px;height:17px;accent-color:var(--ink)}
 .fform{display:flex;flex-direction:column;gap:10px}
 .fform > .f{flex:none}
+.fgrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
+.fgrow .fchk{flex:1 1 200px}
+.fgrow select{flex:0 1 150px;font-size:.86rem;padding:5px 8px;height:34px}
+.fgrow.isdone b{text-decoration:line-through;color:var(--muted)}
 .fsub{margin:18px 0 8px;align-items:center}
 .fsub h3{margin:0}
 .fchk{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
@@ -660,7 +664,7 @@ nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
 /* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
-var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
+var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
 function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
 var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses"];
@@ -1984,12 +1988,12 @@ function famScoreTiles(){
   return'<div class="grid g3 fill">'+FAM.members.map(function(m){var hs=famHabits(m.user_id),sc=famScore(m.user_id),dl=hs.filter(function(x){return hper(x)===7}),dt=dl.filter(function(x){return(x.days||{})[dayStr(0)]}).length;return'<div class="tile"><b>'+(sc==null?"–":sc+"%")+'</b><span>'+esc(m.name)+(m.me?" (you)":"")+' · consistency, last 7 days'+(dl.length?" · "+dt+" of "+dl.length+" done today":"")+'</span></div>'}).join("")+'</div>';
 }
 function famGoalBox(g,who,mine){var n=nextStep(g),p=pct(g);return'<div class="mini"><b style="overflow-wrap:anywhere">'+esc(g.title)+'</b><span class="small muted">'+esc(areaName(g.area))+(g.due?" · by "+esc(g.due):"")+'</span><div class="bar"><i style="width:'+p+'%"></i></div><span class="small">'+p+'% done'+(n?" · next: "+esc(n.t):"")+'</span>'+(mine?'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="g-open" data-id="'+g.id+'">Open</button>':'<span class="small muted">'+esc(who)+'</span>')+'</div>'}
-function famGoalsHtml(){
-  var others=FAM.members.filter(function(m){return !m.me}),mine=list("goals").filter(function(g){return g.shared}),theirs=S.pgoals||[];
-  var h=vh("Goals",mine.length+theirs.length+" shared");
-  h+='<p class="small muted">Goals stay private unless you switch on Show to family on the goal. Combined goals you work on together arrive in a later update.</p><div class="cols">';
+function famGoalsHtml(inTab){
+  var others=FAM.members.filter(function(m){return !m.me}),mine=list("goals").filter(function(g){return g.shared}),theirs=S.pgoals||[],ours=fGoals().filter(function(g){return g.status!=="done"});
+  var h=inTab?vh("Shared from personal hubs",mine.length+theirs.length+" shared"):vh("Goals",ours.length+mine.length+theirs.length+" in view");
+  h+='<p class="small muted">'+(inTab?"Personal goals each of you chose to show. Only the owner can change them.":"Ours are the goals you share and both edit. Personal goals show here only when the owner switches on Show to family.")+'</p><div class="cols">';
   h+='<div class="col"><div class="row"><h3>Mine</h3><span class="pill">'+mine.length+'</span></div>'+(mine.length?mine.map(function(g){return famGoalBox(g,"",true)}).join(""):'<div class="empty small">Open a goal and switch on Show to family.</div>')+'</div>';
-  h+='<div class="col"><div class="row"><h3>Ours</h3><span class="pill">0</span></div><div class="empty small">Combined goals are coming in a later update.</div></div>';
+  if(!inTab)h+='<div class="col"><div class="row"><h3>Ours</h3><span class="pill">'+ours.length+'</span></div>'+(ours.length?ours.map(ourBox).join(""):'<div class="empty small">No family goals yet.</div>')+'<button class="btn" style="align-self:flex-start" data-act="fam-tab" data-tab="goals">'+(ours.length?"All family goals":"Add a family goal")+'</button></div>';
   var byOwner={};theirs.forEach(function(x){(byOwner[x.owner]=byOwner[x.owner]||{name:x.ownerName,items:[]}).items.push(x)});
   var oks=Object.keys(byOwner);
   if(!oks.length)h+='<div class="col"><div class="row"><h3>'+esc(others[0]?others[0].name:"Partner")+'</h3><span class="pill">0</span></div><div class="empty small">'+(others.length?"Nothing shared yet.":"Not joined yet.")+'</div></div>';
@@ -2000,7 +2004,7 @@ function vFamily(){
   var h='<div class="head"><h1>'+esc(FAM?FAM.name:"Family")+'</h1><p class="muted">Your shared space. Each of you keeps a private hub; this page is the part you both see.</p></div>';
   if(!FAM)return h+'<div class="empty">The family space is not available in this view.</div>';
   if(!ui.fam)ui.fam="home";
-  h+=tog("fam",[["home","Overview"],["chores","Chores"],["upkeep","Home upkeep"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
+  h+=tog("fam",[["home","Overview"],["goals","Goals"],["chores","Chores"],["upkeep","Home upkeep"],["habits","Habits"],["cal","Calendar"],["people","People and pets"]]);
   var t=ui.fam;
   if(t==="home"){
     var up=famUpcoming(14);
@@ -2012,6 +2016,7 @@ function vFamily(){
     h+=vh("Members",FAM.members.length+" signed in");
     h+='<div class="grid g3 fill">'+FAM.members.map(function(m){return'<div class="mini"><b>'+esc(m.name)+(m.me?' <span class="pill">You</span>':"")+'</b><span class="small muted">'+(m.role==="owner"?"Owner":"Member")+'</span>'+(m.me?'<div class="f"><label for="fam-name">Your name here</label><input type="text" id="fam-name" data-famname="1" value="'+esc(m.name)+'"></div>':"")+'</div>'}).join("")+'<div class="mini"><b>New here?</b><span class="small">The tour walks through every page and what it is for.</span><button class="btn" style="align-self:flex-start" data-act="tour">Take the tour</button></div></div>';
   }
+  if(t==="goals")h+=famGoalsView();
   if(t==="chores")h+=famChoresView();
   if(t==="upkeep")h+=famUpkeepView();
   if(t==="habits"){
@@ -2072,7 +2077,7 @@ function vHelp(){
   return h;
 }
 function famClick(a,id,b){
-  if(choresClick(a,id,b))return true;
+  if(choresClick(a,id,b)||goalsClick(a,id,b))return true;
   if(a==="fc-day"){ui.fday=b.getAttribute("data-d");ui.fm=ui.fday.slice(0,7);ui.fev=null;render();return true}
   if(a==="fc-mv"){var r=pd((ui.fm||(ui.fday||today()).slice(0,7))+"-01");r.setMonth(r.getMonth()+(+b.getAttribute("data-n")));ui.fm=ymd(r).slice(0,7);render();return true}
   if(a==="fc-now"){ui.fday=today();ui.fm=null;render();return true}
@@ -2087,7 +2092,7 @@ function famClick(a,id,b){
   return false;
 }
 function famSubmit(k,id,f){
-  if(choresSubmit(k,id,f))return true;
+  if(choresSubmit(k,id,f)||goalsSubmit(k,id,f))return true;
   if(k==="fhab"){var n=val("fh-name");if(!n||!famMe())return true;write("f_habits",newId(),{name:n,per:+val("fh-per")||7,owner:famMe(),days:{},created:today()}).then(function(ok){if(ok)flash("Added. Your family can see it.")});document.getElementById("fh-name").value="";return true}
   if(k==="fev"){var p=id?"fe-ed-":"fe-new-",t=val(p+"title"),d=val(p+"date");if(!t||!d){ui.err="Add what it is and the date.";render();return true}
     var who=[].slice.call(f.querySelectorAll('input[name="'+p+'who"]:checked')).map(function(x){return x.value}),en=val(p+"end");
@@ -2102,7 +2107,7 @@ function famSubmit(k,id,f){
   return false;
 }
 function famChange(e){
-  if(choresChange(e))return true;
+  if(choresChange(e)||goalsChange(e))return true;
   if(e.hasAttribute("data-fhtoday")){var hid=e.getAttribute("data-fhtoday"),x=S.f_habits[hid];if(!x||x.owner!==famMe())return true;x=clone(x);x.days=x.days||{};if(e.checked)x.days[dayStr(0)]=1;else delete x.days[dayStr(0)];write("f_habits",hid,x);return true}
   if(e.hasAttribute("data-fp")){var pid=e.getAttribute("data-id"),fk=e.getAttribute("data-fp"),pr=S.f_people[pid];if(!pr)return true;var v=e.value.trim();if(fk==="name"&&!v){render();return true}pr=clone(pr);pr[fk]=v;savedNote(write("f_people",pid,pr));return true}
   if(e.hasAttribute("data-fbset")){var fid=e.getAttribute("data-id"),fr=S.f_feedback[fid];if(!fr)return true;fr=clone(fr);fr[e.getAttribute("data-fbset")]=e.value.trim();savedNote(write("f_feedback",fid,fr));return true}
@@ -2213,6 +2218,64 @@ function choresChange(e){
   if(e.hasAttribute("data-ftddone")){var tid=e.getAttribute("data-ftddone"),t=S.f_todos[tid];if(!t)return true;t=clone(t);t.done=e.checked;if(e.checked){t.doneAt=today();t.doneBy=famMe();t.doneByName=memName(famMe())}else{delete t.doneAt;delete t.doneBy;delete t.doneByName}write("f_todos",tid,t);return true}
   return false;
 }
+/* ---------- family combined goals ---------- */
+var FGST=[["active","Active"],["paused","Paused"],["done","Done"]];
+function fGoals(){var o={active:0,paused:1,done:2};return list("f_goals").sort(function(a,b){return(o[a.status]||0)-(o[b.status]||0)||(a.due||"9999").localeCompare(b.due||"9999")||a.title.localeCompare(b.title)})}
+function fgNext(g){var s=g.steps||[];for(var i=0;i<s.length;i++)if(!s[i].done)return s[i];return null}
+function ourBox(g){var n=fgNext(g),p=pct(g),ow={};(g.steps||[]).forEach(function(s){if(s.who)ow[s.who]=1});
+  return'<div class="mini" id="fg-'+g.id+'"><div class="spread"><b style="overflow-wrap:anywhere">'+esc(g.title)+'</b>'+(g.status&&g.status!=="active"?'<span class="pill">'+esc((FGST.filter(function(x){return x[0]===g.status})[0]||[])[1]||"")+'</span>':"")+'</div><span class="small muted">'+esc(g.area?areaName(g.area):"Family")+(g.due?" · by "+esc(g.due):"")+'</span><div class="bar"><i style="width:'+p+'%"></i></div><span class="small">'+p+'% done'+(n?" · next: "+esc(n.t)+(n.who?" ("+esc(pName(n.who))+")":""):"")+'</span>'+(Object.keys(ow).length?'<span class="small muted">'+esc(Object.keys(ow).map(pName).filter(Boolean).join(", "))+'</span>':"")+'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="fg-open" data-id="'+g.id+'">Open</button></div>'}
+function fgItems(g,k){
+  var it=g[k]||[],steps=k==="steps";
+  var h='<div class="col">'+(it.length?"":'<p class="small muted">'+(steps?"No steps yet. Break the goal into small jobs and say who does each one.":"No milestones yet. Add the checkpoints along the way.")+'</p>');
+  it.forEach(function(s,i){h+='<div class="fgrow'+(s.done?" isdone":"")+'"><label class="fchk"><input type="checkbox" data-fgck="'+k+'" data-id="'+g.id+'" data-i="'+i+'"'+(s.done?" checked":"")+'><b>'+esc(s.t)+'</b></label>'+(steps?'<select data-fgwho="'+i+'" data-id="'+g.id+'" aria-label="Who does this step">'+pOpts(s.who,"Anyone")+'</select>':"")+(s.done&&s.doneByName?'<span class="small muted">done by '+esc(s.doneByName)+'</span>':"")+'<button class="btn ghost" aria-label="Remove" data-act="fg-rm" data-k="'+k+'" data-id="'+g.id+'" data-i="'+i+'">×</button></div>'});
+  h+='<form class="add" data-form="fgitem" data-k="'+k+'" data-id="'+g.id+'"><input type="text" id="fgi-'+k+'" class="keep" placeholder="'+(steps?"Add a step":"Add a milestone")+'" aria-label="'+(steps?"Add a step":"Add a milestone")+'" style="flex:2 1 200px">'+(steps?'<select id="fgi-who" class="keep" aria-label="Who" style="flex:1 1 120px">'+pOpts("","Anyone")+'</select>':"")+'<button class="btn" type="submit">Add</button></form></div>';
+  return h;
+}
+function fgDetail(id){
+  var g=Object.assign({id:id},S.f_goals[id]),p=pct(g);
+  var h='<div class="row"><button class="btn ghost" data-act="fg-close">← All family goals</button></div>';
+  h+=vh(esc(g.title),p+"% done");
+  h+='<div class="card"><div class="bar" style="margin-bottom:12px"><i style="width:'+p+'%"></i></div><div class="row fwrap"><div class="f" style="flex:2 1 240px"><label for="fgd-title">Goal</label><input type="text" id="fgd-title" data-fg="title" data-id="'+id+'" value="'+esc(g.title)+'"></div><div class="f"><label for="fgd-status">Status</label><select id="fgd-status" data-fg="status" data-id="'+id+'">'+FGST.map(function(x){return'<option value="'+x[0]+'"'+((g.status||"active")===x[0]?" selected":"")+'>'+x[1]+'</option>'}).join("")+'</select></div></div>';
+  h+='<div class="row fwrap"><div class="f"><label for="fgd-area">Area</label><select id="fgd-area" data-fg="area" data-id="'+id+'">'+areaOptions(g.area)+'</select></div><div class="f"><label for="fgd-target">Target</label><input type="text" id="fgd-target" data-fg="target" data-id="'+id+'" value="'+esc(g.target||"")+'" placeholder="A number or result"></div><div class="f"><label for="fgd-due">By when</label><input type="date" id="fgd-due" data-fg="due" data-id="'+id+'" value="'+esc(g.due||"")+'"></div></div>';
+  h+='<div class="f" style="margin-top:10px"><label for="fgd-why">Why it matters to us</label><textarea id="fgd-why" rows="2" data-fg="why" data-id="'+id+'" placeholder="What changes for the family when this is done?">'+esc(g.why||"")+'</textarea></div><p class="small muted">Changes save when you leave a box.</p></div>';
+  h+='<div class="grid g2"><div class="card"><div class="head"><h2>Steps</h2><p class="muted small">Each step has an owner. Steps show under that person below the goals list.</p></div>'+fgItems(g,"steps")+'</div><div class="card"><div class="head"><h2>Milestones</h2><p class="muted small">Checkpoints that show you are getting there.</p></div>'+fgItems(g,"milestones")+'</div></div>';
+  h+='<div class="row"><button class="btn danger" data-act="del" data-coll="f_goals" data-id="'+id+'">'+(ui.confirm==="f_goals/"+id?"Confirm: delete this goal":"Delete goal")+'</button></div>';
+  return h;
+}
+function famGoalsView(){
+  if(ui.fgo&&S.f_goals[ui.fgo])return fgDetail(ui.fgo);
+  var gs=fGoals(),act=gs.filter(function(g){return g.status!=="done"}),dn=gs.filter(function(g){return g.status==="done"});
+  var h=vh("Our goals",act.length+" in progress");
+  h+='<p class="small muted">Goals you work on together. Both of you can edit them, tick steps and add new ones.</p>';
+  h+=act.length?'<div class="grid g3 fill">'+act.map(ourBox).join("")+'</div>':'<div class="empty small">No family goals yet. A holiday fund, a tidy garage, a family fitness challenge: anything you both work towards.</div>';
+  h+='<div class="card"><form class="add" data-form="fgnew"><input type="text" id="fgn-title" class="keep" placeholder="New family goal" aria-label="New family goal" style="flex:3 1 220px"><select id="fgn-area" class="keep" aria-label="Area" style="flex:1 1 160px">'+areaOptions("")+'</select><input type="date" id="fgn-due" class="keep" aria-label="By when" style="flex:1 1 140px"><button class="btn" type="submit">Add goal</button></form></div>';
+  if(dn.length)h+='<details class="earlier"><summary class="small">Finished ('+dn.length+')</summary><div class="grid g3 fill" style="margin-top:10px">'+dn.map(ourBox).join("")+'</div></details>';
+  var by={},ppl=famPeople().filter(function(p){return p.kind!=="pet"});
+  act.forEach(function(g){(g.steps||[]).forEach(function(s,i){if(!s.done)(by[s.who||""]=by[s.who||""]||[]).push({g:g,s:s,i:i})})});
+  var cols=ppl.map(function(p){return[p.id,p.name]}).concat([["","Anyone"]]).filter(function(c){return by[c[0]]});
+  h+=vh("Open steps by person",cols.reduce(function(n,c){return n+by[c[0]].length},0)+" open");
+  h+=cols.length?'<div class="cols">'+cols.map(function(c){return'<div class="col"><div class="row"><h3>'+esc(c[1])+'</h3><span class="pill">'+by[c[0]].length+'</span></div>'+by[c[0]].map(function(x){return'<div class="mini"><label class="fchk"><input type="checkbox" data-fgck="steps" data-id="'+x.g.id+'" data-i="'+x.i+'"><b>'+esc(x.s.t)+'</b></label><span class="small muted">'+esc(x.g.title)+'</span></div>'}).join("")+'</div>'}).join("")+'</div>':'<div class="empty small">No open steps.</div>';
+  h+=famGoalsHtml(true);
+  return h;
+}
+function fgSave(id,fn,msg){var g=S.f_goals[id];if(!g)return Promise.resolve(false);g=clone(g);fn(g);g.updated=today();var p=write("f_goals",id,g);if(msg)p.then(function(ok){if(ok)flash(msg)});return p}
+function goalsClick(a,id,b){
+  if(a==="fg-open"){ui.fam="goals";ui.fgo=id;if(current()!=="family")location.hash="#family";else render();window.scrollTo(0,0);return true}
+  if(a==="fg-close"){ui.fgo=null;render();return true}
+  if(a==="fg-rm"){var k=b.getAttribute("data-k"),i=+b.getAttribute("data-i");fgSave(id,function(g){(g[k]||[]).splice(i,1)});return true}
+  return false;
+}
+function goalsSubmit(k,id,f){
+  if(k==="fgnew"){var t=val("fgn-title");if(!t)return true;var nid=newId();write("f_goals",nid,{title:t,area:val("fgn-area"),due:val("fgn-due"),target:"",why:"",status:"active",steps:[],milestones:[],by:famMe(),created:today(),updated:today()}).then(function(ok){if(ok){ui.fgo=nid;render();window.scrollTo(0,0)}});document.getElementById("fgn-title").value="";return true}
+  if(k==="fgitem"){var kk=f.getAttribute("data-k"),inp=document.getElementById("fgi-"+kk),tx=inp?inp.value.trim():"";if(!tx)return true;var who=kk==="steps"?val("fgi-who"):"";inp.value="";fgSave(id,function(g){var it={t:tx,done:false};if(kk==="steps")it.who=who;(g[kk]=g[kk]||[]).push(it)});return true}
+  return false;
+}
+function goalsChange(e){
+  if(e.hasAttribute("data-fg")){var id=e.getAttribute("data-id"),k=e.getAttribute("data-fg"),v=e.value.trim();if(k==="title"&&!v){render();return true}savedNote(fgSave(id,function(g){g[k]=v}));return true}
+  if(e.hasAttribute("data-fgck")){var gid=e.getAttribute("data-id"),kk=e.getAttribute("data-fgck"),i=+e.getAttribute("data-i"),on=e.checked;fgSave(gid,function(g){var s=(g[kk]||[])[i];if(!s)return;s.done=on;if(on){s.doneBy=famMe();s.doneByName=memName(famMe());s.doneAt=today()}else{delete s.doneBy;delete s.doneByName;delete s.doneAt}});return true}
+  if(e.hasAttribute("data-fgwho")){var wid=e.getAttribute("data-id"),wi=+e.getAttribute("data-fgwho"),wv=e.value;savedNote(fgSave(wid,function(g){if(g.steps&&g.steps[wi])g.steps[wi].who=wv}));return true}
+  return false;
+}
 /* ---------- tour ---------- */
 var TOUR=[
  ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. The Family page is the one place you share. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
@@ -2220,7 +2283,7 @@ var TOUR=[
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
  ["plan","Planner","Plan by day, week, month or year. Add tasks with a time, set them to repeat, and link them to a goal so the work adds up. Each day and week has a space for top priorities. Anything you schedule from other pages, such as workouts, shows here too."],
  ["log","Journal","One card per day. Press Add entry, write what happened and how you felt. Claude can read your entries and point out patterns over time, such as what drains you or what keeps you on track. Entries are private."],
- ["family","Family","The shared page. Overview shows the next two weeks, how the chores and home jobs are going, habit consistency and shared goals. Chores holds the jobs that repeat (who does them, how often) and one-off to-dos. Home upkeep tracks jobs that come round every few months or once a year, like the furnace filter or winter tires, and works out when each is next due. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
+ ["family","Family","The shared page. Overview shows the next two weeks, how the chores and home jobs are going, habit consistency and shared goals. Goals holds the goals you work on together: each step has an owner, and you can see everyone’s open steps at a glance. Chores holds the jobs that repeat (who does them, how often) and one-off to-dos. Home upkeep tracks jobs that come round every few months or once a year, like the furnace filter or winter tires, and works out when each is next due. Habits holds the habits you track together, separate from your personal ones. Calendar holds family events with details and notes, plus everyone’s birthdays. People and pets has a profile for each of you, the kids and the pets: sizes, doctors, allergies, vets and so on."],
  ["areas","Explore","Ideas for what to work on. Life is split into areas such as money, health, home and career. Pick up to three focus areas, browse the goal ideas inside each one, and add the ones you like as goals."],
  ["goals","Goals","Every goal has a target, a date, steps and milestones, and a result number you record over time. Flags tell you when a goal needs something, such as a date or a scheduled next step. To show a goal on the Family page, open it and tick Show to family; otherwise it stays private."],
  ["fit","Fitness","Training: build workouts and schedule them over weeks. Check-ins: record weight, measurements and photos to see progress. Nutrition: daily meals and macro targets. Fitness goals sit in their own tab."],
@@ -2492,7 +2555,7 @@ if(a==="soc-doc-rm"){var sdi=+b.getAttribute("data-i"),sdk2="socdoc/"+id+"/"+sdi
 if(a==="soc-rm"){var sk=b.getAttribute("data-k"),sri=+b.getAttribute("data-i"),skey="soc/"+sk+"/"+id+"/"+sri;if(ui.confirm!==skey){ui.confirm=skey;render();return}ui.confirm=null;if(sk==="posts")ui.socPost=null;socSave(id,function(d){if(d[sk])d[sk].splice(sri,1)});render();return}
 if(a==="soc-del-plat"){if(ui.confirm!=="socq/"+id){ui.confirm="socq/"+id;render();return}ui.confirm=null;ui.socq=null;ui.socPost=null;remove("socials",id);render();return}
 if(a==="soc-del-prof"){if(ui.confirm!=="socp/"+id){ui.confirm="socp/"+id;render();return}ui.confirm=null;list("socials").forEach(function(x){if(x.profile===id)remove("socials",x.id)});if(S.plans["sd-"+id])remove("plans","sd-"+id);savePlan("social",function(d){d.profiles=socProfiles().filter(function(x){return x.id!==id})});ui.socp="personal";ui.socq=null;ui.socPost=null;render();return}
-if(a==="tog"){var tkk=b.getAttribute("data-key");ui[tkk]=id;if(tkk==="biz"){ui.pj=null;ui.cl=null}if(tkk==="socp"){ui.socq=null;ui.socPost=null;ui.socAdd=null}if(tkk==="socq"){ui.socPost=null;ui.socAdd=null}render();return}
+if(a==="tog"){var tkk=b.getAttribute("data-key");ui[tkk]=id;if(tkk==="biz"){ui.pj=null;ui.cl=null}if(tkk==="fam"){ui.fgo=null;ui.fperson=null;ui.fch=null;ui.fmx=null;ui.fev=null}if(tkk==="socp"){ui.socq=null;ui.socPost=null;ui.socAdd=null}if(tkk==="socq"){ui.socPost=null;ui.socAdd=null}render();return}
   if(a==="nw"){var nn=+b.getAttribute("data-n");ui.nw=nn===0?0:ui.nw+nn;render();return}
   if(a==="jumpx"){ui.scrollTo="grp-"+id;location.hash="#areas";return}
   if(a==="lib"){ui.lib=id||"";render();return}

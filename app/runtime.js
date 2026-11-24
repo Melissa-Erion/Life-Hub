@@ -99,7 +99,7 @@
     loading = (async function () {
       var out = {}, from = 0, size = 1000;
       for (;;) {
-        var r = await sb.from("docs").select("coll,id,data").order("coll").order("id").range(from, from + size - 1);
+        var r = await sb.from("docs").select("coll,id,data").eq("user_id", session.user.id).order("coll").order("id").range(from, from + size - 1);
         if (r.error) throw r.error;
         r.data.forEach(function (row) { (out[row.coll] = out[row.coll] || {})[row.id] = row.data; });
         if (r.data.length < size) break;
@@ -130,7 +130,7 @@
     });
   }
   function del(coll, id) {
-    return sb.from("docs").delete().eq("coll", coll).eq("id", id).then(function (r) {
+    return sb.from("docs").delete().eq("user_id", session.user.id).eq("coll", coll).eq("id", id).then(function (r) {
       if (r.error) throw r.error;
       if (cache[coll]) delete cache[coll][id];
       emit(coll);
@@ -163,6 +163,97 @@
         },
       };
     },
+  };
+
+  /* ---------- family: shared space (public.shared_docs) and goals family members share ---------- */
+  var fam = { loading: null, loaded: false, space: null, name: "Family", members: [], cache: {}, listeners: {}, partner: {}, plisteners: [], ilisteners: [] };
+  function famEmit(coll) { (fam.listeners[coll] || []).forEach(function (fn) { fn(); }); }
+  function famInfo() {
+    return { space: fam.space, name: fam.name, me: session.user.id, members: fam.members.map(function (m) { return { user_id: m.user_id, name: m.display_name || "Member", role: m.role, me: m.user_id === session.user.id }; }) };
+  }
+  function partnerList() {
+    var names = {}; fam.members.forEach(function (m) { names[m.user_id] = m.display_name || "Family member"; });
+    return Object.keys(fam.partner).map(function (k) { var x = fam.partner[k]; return { owner: x.user_id, ownerName: names[x.user_id] || "Family member", id: x.id, data: JSON.parse(JSON.stringify(x.data)) }; });
+  }
+  function emitPartner() { var l = partnerList(); fam.plisteners.forEach(function (fn) { fn(l); }); }
+  function emitInfo() { var i = famInfo(); fam.ilisteners.forEach(function (fn) { fn(i); }); }
+  async function loadPartnerGoals() {
+    var others = fam.members.filter(function (m) { return m.user_id !== session.user.id; }).map(function (m) { return m.user_id; });
+    var next = {};
+    if (others.length) {
+      var g = await sb.from("docs").select("user_id,id,data").eq("coll", "goals").in("user_id", others);
+      if (g.error) throw g.error;
+      g.data.forEach(function (row) { if (row.data && row.data.shared) next[row.user_id + ":" + row.id] = row; });
+    }
+    fam.partner = next; emitPartner();
+  }
+  function famLoad() {
+    if (fam.loading) return fam.loading;
+    fam.loading = (async function () {
+      var m = await sb.from("space_members").select("space_id,user_id,role,display_name");
+      if (m.error) throw m.error;
+      var mine = m.data.filter(function (x) { return x.user_id === session.user.id; })[0];
+      fam.space = mine ? mine.space_id : null;
+      fam.members = m.data.filter(function (x) { return x.space_id === fam.space; });
+      if (fam.space) {
+        var sp = await sb.from("spaces").select("name").eq("id", fam.space).maybeSingle();
+        if (sp.data && sp.data.name) fam.name = sp.data.name;
+        var out = {}, from = 0, size = 1000;
+        for (;;) {
+          var r = await sb.from("shared_docs").select("coll,id,data").eq("space_id", fam.space).order("coll").order("id").range(from, from + size - 1);
+          if (r.error) throw r.error;
+          r.data.forEach(function (row) { (out[row.coll] = out[row.coll] || {})[row.id] = row.data; });
+          if (r.data.length < size) break;
+          from += size;
+        }
+        fam.cache = out;
+        await loadPartnerGoals();
+        sb.channel("shared-" + fam.space).on("postgres_changes", { event: "*", schema: "public", table: "shared_docs", filter: "space_id=eq." + fam.space }, function (p) {
+          var row = p.eventType === "DELETE" ? p.old : p.new;
+          if (!row || !row.coll) return;
+          if (p.eventType === "DELETE") { if (fam.cache[row.coll]) delete fam.cache[row.coll][row.id]; }
+          else (fam.cache[row.coll] = fam.cache[row.coll] || {})[row.id] = row.data;
+          famEmit(row.coll);
+        }).subscribe();
+        fam.members.forEach(function (mm) {
+          if (mm.user_id === session.user.id) return;
+          sb.channel("pgoals-" + mm.user_id).on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: "user_id=eq." + mm.user_id }, function () { loadPartnerGoals().catch(function () {}); }).subscribe();
+        });
+        // a goal that is unshared stops arriving, so refresh now and then
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) loadPartnerGoals().catch(function () {}); });
+        setInterval(function () { loadPartnerGoals().catch(function () {}); }, 120000);
+      }
+      fam.loaded = true;
+      Object.keys(fam.listeners).forEach(famEmit); emitInfo();
+    })();
+    fam.loading.catch(function () { fam.loading = null; });
+    return fam.loading;
+  }
+  function fsnap(coll) { var c = fam.cache[coll] || {}; return { docs: Object.keys(c).map(function (id) { return { id: id, data: function () { return JSON.parse(JSON.stringify(c[id])); } }; }) }; }
+  function fput(coll, id, data) {
+    if (!fam.space) return Promise.reject(new Error("No family space"));
+    return sb.from("shared_docs").upsert({ space_id: fam.space, coll: coll, id: id, data: data, updated_at: new Date().toISOString(), updated_by: session.user.id }, { onConflict: "space_id,coll,id" }).then(function (r) {
+      if (r.error) throw r.error;
+      (fam.cache[coll] = fam.cache[coll] || {})[id] = JSON.parse(JSON.stringify(data)); famEmit(coll);
+    });
+  }
+  function fdel(coll, id) {
+    if (!fam.space) return Promise.reject(new Error("No family space"));
+    return sb.from("shared_docs").delete().eq("space_id", fam.space).eq("coll", coll).eq("id", id).then(function (r) {
+      if (r.error) throw r.error;
+      if (fam.cache[coll]) delete fam.cache[coll][id]; famEmit(coll);
+    });
+  }
+  var family = {
+    collection: function (c) {
+      return {
+        onSnapshot: function (cb, err) { (fam.listeners[c] = fam.listeners[c] || []).push(function () { cb(fsnap(c)); }); famLoad().then(function () { cb(fsnap(c)); }, function (e) { if (err) err(e); }); },
+        doc: function (id) { return { set: function (d) { return fput(c, id, d); }, delete: function () { return fdel(c, id); } }; },
+      };
+    },
+    onInfo: function (cb) { fam.ilisteners.push(cb); famLoad().then(function () { cb(famInfo()); }, function () { cb(null); }); },
+    onPartnerGoals: function (cb) { fam.plisteners.push(cb); famLoad().then(function () { cb(partnerList()); }, function () { cb([]); }); },
+    setName: function (name) { return sb.from("space_members").update({ display_name: name }).eq("space_id", fam.space).eq("user_id", session.user.id).then(function (r) { if (r.error) throw r.error; fam.members.forEach(function (m) { if (m.user_id === session.user.id) m.display_name = name; }); emitInfo(); emitPartner(); }); },
   };
 
   /* ---------- assets: files in a private Storage bucket, shown at /_blob/<id> ---------- */
@@ -207,6 +298,7 @@
         if (name === "sample") return sample;
         if (name === "downloads") return downloads;
         if (name === "user") return { can: function () { return Promise.resolve(true); } };
+        if (name === "family") return family;
         return null;
       });
     },

@@ -585,6 +585,9 @@ h2.exall{margin:0}
 .rhy.ok b{color:var(--muted)}
 /* Sidebar fits a laptop screen with the group labels */
 @media (min-width:761px){nav{overflow-y:auto}nav a{padding-top:8px;padding-bottom:8px}.navlbl{padding-top:10px}}
+/* Family */
+label.gshare{gap:8px;align-items:center}
+label.gshare input{width:17px;height:17px;accent-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -595,6 +598,8 @@ h2.exall{margin:0}
     <a class="m" href="#today">Today</a>
     <a class="m" href="#plan">Planner</a>
     <a href="#log">Journal</a>
+    <div class="navlbl">Family</div>
+    <a href="#family">Family</a>
     <div class="navlbl">Direction</div>
     <a href="#areas">Explore</a>
     <a class="m" href="#goals">Goals</a>
@@ -619,6 +624,9 @@ h2.exall{margin:0}
 <script>
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
+/* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
+var fdb=null,FAM=null,FCOLLS=["f_trash"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
+function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
 var COLLS=["goals","skills","improve","log","resources","paths","habits","journal","tasks","plans","workouts","trackers","clients","projects","acts","routines","checkins","meals","money","subs","trash","invoices","pmoney","savings","accounts","briefs","socials","courses"];
 var view=document.getElementById("view");
@@ -648,7 +656,7 @@ var chain={};
 function write(coll,id,data){
   if(!db)return Promise.resolve();
   var k=coll+"/"+id;
-  chain[k]=(chain[k]||Promise.resolve()).then(function(){return db.collection(coll).doc(id).set(data)}).then(function(){return true}).catch(function(e){
+  chain[k]=(chain[k]||Promise.resolve()).then(function(){var st=storeFor(coll);if(!st)throw new Error("Not connected");return st.collection(coll).doc(id).set(data)}).then(function(){return true}).catch(function(e){
     if(e&&e.code==="invalid_argument"){canWrite=false}
     ui.err="That change could not be saved. Check your connection and try again.";render();return false;
   });
@@ -658,10 +666,11 @@ function flash(m){if(window.lhToast)window.lhToast(m)}
 function savedNote(p){if(p&&p.then)p.then(function(ok){if(ok)flash("Saved")})}
 function writeSeq(items){return items.reduce(function(pr,it){return pr.then(function(){return write(it[0],it[1],it[2])})},Promise.resolve())}
 function remove(coll,id){
-  if(!db)return Promise.resolve();
+  var st=storeFor(coll),tr=coll.indexOf("f_")===0?"f_trash":"trash";
+  if(!st)return Promise.resolve();
   var cur=S[coll]&&S[coll][id],pre=Promise.resolve();
-  if(cur&&coll!=="trash")pre=db.collection("trash").doc(newId()).set({coll:coll,id:id,data:clone(cur),at:today()}).catch(function(){});
-  return pre.then(function(){return db.collection(coll).doc(id).delete()}).catch(function(){ui.err="That could not be deleted. Try again.";render()});
+  if(cur&&coll!==tr)pre=st.collection(tr).doc(newId()).set({coll:coll,id:id,data:clone(cur),at:today()}).catch(function(){});
+  return pre.then(function(){return st.collection(coll).doc(id).delete()}).catch(function(){ui.err="That could not be deleted. Try again.";render()});
 }
 function saveTax(){if(db)return db.doc("meta/taxonomy").set(clone(S.tax)).catch(function(){ui.err="Categories could not be saved. Try again.";render()})}
 
@@ -1290,10 +1299,11 @@ function goalsGuide(){
 }
 function goalCard(g){
   var p=pct(g),open=ui.open===g.id,pl=ui.plan[g.id];
-  var h='<div class="card goal" id="goal-'+g.id+'"><div class="spread"><div><button class="title" data-act="g-open" data-id="'+g.id+'" aria-expanded="'+open+'">'+esc(g.title)+'</button><div class="small muted">'+esc(areaName(g.area))+(g.sub?" · "+esc(g.sub):"")+(g.due?" · by "+esc(g.due):"")+'</div></div><span class="pill '+esc(g.status)+'">'+esc(g.status)+'</span></div><div class="row"><div class="bar" style="flex:1" role="progressbar" aria-valuenow="'+p+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+p+'%"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+p+'%</span></div>';
+  var h='<div class="card goal" id="goal-'+g.id+'"><div class="spread"><div><button class="title" data-act="g-open" data-id="'+g.id+'" aria-expanded="'+open+'">'+esc(g.title)+'</button><div class="small muted">'+esc(areaName(g.area))+(g.sub?" · "+esc(g.sub):"")+(g.due?" · by "+esc(g.due):"")+'</div></div><span class="row" style="gap:6px">'+(g.shared?'<span class="pill">Shared with family</span>':"")+'<span class="pill '+esc(g.status)+'">'+esc(g.status)+'</span></span></div><div class="row"><div class="bar" style="flex:1" role="progressbar" aria-valuenow="'+p+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+p+'%"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+p+'%</span></div>';
   var gfl=goalFlags(g);if(gfl.length)h+='<div class="gflags">'+gfl.map(function(x){return'<button class="gflag" '+goFix(g.id,x[1])+'>'+x[0]+'</button>'}).join("")+'</div>';
   if(open){
     h+='<div class="detail"><div class="row"><div class="f" style="flex:2 1 240px"><label for="gt-'+g.id+'">Goal</label><input type="text" id="gt-'+g.id+'" data-gfield="title" data-id="'+g.id+'" value="'+esc(g.title)+'"></div><div class="f"><label for="gs-'+g.id+'">Status</label><select id="gs-'+g.id+'" data-gfield="status" data-id="'+g.id+'">'+["draft","active","paused","done"].map(function(s){return'<option'+(g.status===s?" selected":"")+'>'+s+'</option>'}).join("")+'</select></div><div class="f"><label for="gg-'+g.id+'">Target</label><input type="text" id="gg-'+g.id+'" data-gfield="target" data-id="'+g.id+'" value="'+esc(g.target||"")+'" placeholder="A number or result"></div><div class="f"><label for="gd-'+g.id+'">By when</label><input type="date" id="gd-'+g.id+'" data-gfield="due" data-id="'+g.id+'" value="'+esc(g.due||"")+'"></div></div>';
+    if(FAM)h+='<label class="row small gshare"><input type="checkbox"'+(g.shared?" checked":"")+' data-gshare="'+g.id+'"> Show to family <span class="muted">· '+(g.shared?"visible on the Family page":"private, only you can see it")+'</span></label>';
     h+='<div class="f"><label for="gw-'+g.id+'">Why it matters</label><textarea id="gw-'+g.id+'" data-gfield="why" data-id="'+g.id+'" placeholder="What changes when this is done?">'+esc(g.why||"")+'</textarea></div>';
     var pts=g.points||[],lastp=pts.length?pts[pts.length-1]:null;
     h+='<div class="card inset"><div class="head"><h3>Result number</h3><p class="small muted">The one number that shows this goal is working. Record it regularly so actions can be compared with results.</p></div><div class="row"><div class="f"><label for="gm-'+g.id+'">What you measure</label><input type="text" id="gm-'+g.id+'" data-gfield="metric" data-id="'+g.id+'" value="'+esc(g.metric||"")+'" placeholder="for example followers, revenue, sessions per week"></div><form class="add" data-form="point" data-id="'+g.id+'" style="flex:1 1 200px"><div class="f"><label for="gp-'+g.id+'">Value today</label><input type="text" inputmode="decimal" id="gp-'+g.id+'" class="keep" placeholder="number"></div><button class="btn" type="submit">Record</button></form></div>'+(lastp?'<p class="small">Latest: <b>'+esc(lastp.v)+'</b> on '+esc(lastp.d)+(pts.length>1?' · started at '+esc(pts[0].v)+' on '+esc(pts[0].d):'')+'</p>':'')+spark(pts)+'</div>';
@@ -1876,7 +1886,28 @@ function vCourse(c,id){
   h+='<div><button class="btn danger" data-act="co-del" data-id="'+id+'">'+(ui.confirm==="codel/"+id?"Confirm: delete course"+(up.length?" and "+up.length+" planned session"+(up.length===1?"":"s"):""):"Delete course")+'</button></div>';
   return h;
 }
-var VIEWS={study:vStudy,social:vSocial,money:vMoney,find:vFind,data:vData,fit:vFit,biz:vBiz,plan:vPlan,today:vToday,goals:vGoals,areas:vAreas,claude:vClaude,log:vLog,learn:vLearn};
+function famGoalBox(g,who,mine){var n=nextStep(g),p=pct(g);return'<div class="mini"><b style="overflow-wrap:anywhere">'+esc(g.title)+'</b><span class="small muted">'+esc(areaName(g.area))+(g.due?" · by "+esc(g.due):"")+'</span><div class="bar"><i style="width:'+p+'%"></i></div><span class="small">'+p+'% done'+(n?" · next: "+esc(n.t):"")+'</span>'+(mine?'<button class="btn" style="align-self:flex-start;padding:4px 12px;font-size:.8rem" data-act="g-open" data-id="'+g.id+'">Open</button>':'<span class="small muted">'+esc(who)+'</span>')+'</div>'}
+function vFamily(){
+  var h='<div class="head"><h1>'+esc(FAM?FAM.name:"Family")+'</h1><p class="muted">Your shared space. Each of you keeps a private hub; anything you choose to share shows here for both of you.</p></div>';
+  if(!FAM)return h+'<div class="empty">The family space is not available in this view.</div>';
+  var me=FAM.members.filter(function(m){return m.me})[0]||{},others=FAM.members.filter(function(m){return !m.me});
+  h+=vh("Members",FAM.members.length+" in "+esc(FAM.name));
+  h+='<div class="grid g3 fill">'+FAM.members.map(function(m){return'<div class="mini"><b>'+esc(m.name)+(m.me?' <span class="pill">You</span>':"")+'</b><span class="small muted">'+(m.role==="owner"?"Owner":"Member")+'</span>'+(m.me?'<div class="f"><label for="fam-name">Your name here</label><input type="text" id="fam-name" data-famname="1" value="'+esc(m.name)+'"></div>':"")+'</div>'}).join("")+(others.length?"":'<div class="mini"><b>Invite your partner</b><span class="small">Ask Claude to set up their login with their email address. They get their own private hub and join this space.</span></div>')+'</div>';
+  var mine=list("goals").filter(function(g){return g.shared}),theirs=S.pgoals||[];
+  h+=vh("Goals",mine.length+theirs.length+" shared");
+  h+='<p class="small muted">Goals stay private unless you switch on Show to family on the goal. Combined goals you work on together arrive in the next update.</p>';
+  h+='<div class="cols">';
+  h+='<div class="col"><div class="row"><h3>Mine</h3><span class="pill">'+mine.length+'</span></div>'+(mine.length?mine.map(function(g){return famGoalBox(g,"",true)}).join(""):'<div class="empty small">Open a goal and switch on Show to family.</div>')+'</div>';
+  h+='<div class="col"><div class="row"><h3>Ours</h3><span class="pill">0</span></div><div class="empty small">Combined goals are coming next.</div></div>';
+  var byOwner={};theirs.forEach(function(x){(byOwner[x.owner]=byOwner[x.owner]||{name:x.ownerName,items:[]}).items.push(x)});
+  var oks=Object.keys(byOwner);
+  if(!oks.length)h+='<div class="col"><div class="row"><h3>'+esc(others[0]?others[0].name:"Partner")+'</h3><span class="pill">0</span></div><div class="empty small">'+(others.length?"Nothing shared yet.":"Not joined yet.")+'</div></div>';
+  oks.forEach(function(k){var o=byOwner[k];h+='<div class="col"><div class="row"><h3>'+esc(o.name)+'</h3><span class="pill">'+o.items.length+'</span></div>'+o.items.map(function(x){var g=x.data;g.id=x.id;return famGoalBox(g,"Shared by "+o.name,false)}).join("")+'</div>'});
+  h+='</div>';
+  h+='<p class="small muted">Coming in the next updates: profiles for family members and pets, a shared calendar with events, chores and tasks, yearly maintenance, birthdays and gifts, household money, holidays and trips.</p>';
+  return h;
+}
+var VIEWS={family:vFamily,study:vStudy,social:vSocial,money:vMoney,find:vFind,data:vData,fit:vFit,biz:vBiz,plan:vPlan,today:vToday,goals:vGoals,areas:vAreas,claude:vClaude,log:vLog,learn:vLearn};
 function current(){var h=location.hash.replace("#","");return VIEWS[h]?h:"today"}
 function render(){
   var cur=current();
@@ -1891,7 +1922,7 @@ function render(){
   if(ui.err){h+='<p class="banner">'+esc(ui.err)+'</p>';ui.err=null}
   if(ui.msg){h+='<p class="banner" style="color:var(--ink);border-color:var(--ink)">'+esc(ui.msg)+'</p>';if(ui.msg!==ui.msgShown){ui.msgShown=ui.msg;clearTimeout(ui.msgT);ui.msgT=setTimeout(function(){ui.msg=null;ui.msgShown=null;render()},5000)}}
   if(!canWrite)h+='<p class="banner">You are viewing this hub without edit access, so changes will not save.</p>';
-  var NAMES={study:"Learning",money:"Money",find:"Search",data:"Backup",fit:"Fitness",biz:"Business",plan:"Planner",today:"Today",goals:"Goals",areas:"Explore",claude:"Claude",log:"Journal",learn:"Library"};
+  var NAMES={family:"Family",study:"Learning",money:"Money",find:"Search",data:"Backup",fit:"Fitness",biz:"Business",plan:"Planner",today:"Today",goals:"Goals",areas:"Explore",claude:"Claude",log:"Journal",learn:"Library"};
   if(ui.prev&&ui.prev!==cur)h+='<button class="btn ghost back" data-act="back">← Back to '+NAMES[ui.prev]+'</button>';
   view.innerHTML=h+VIEWS[cur]();
   view.querySelectorAll(".card").forEach(function(cd){if(cd.querySelector(".savebar,.card"))return;if(cd.querySelector("textarea[data-plan],input[type=text][data-plan],textarea[data-journal],textarea[data-cnf]"))cd.insertAdjacentHTML("beforeend",'<div class="savebar"><span class="small muted">Boxes also save when you tap outside them.</span><button class="btn primary" data-act="pl-save">Save</button></div>')});
@@ -1975,6 +2006,8 @@ view.addEventListener("change",function(ev){
   var e=ev.target;
   if(e.hasAttribute("data-uisel")){ui[e.getAttribute("data-uisel")]=e.value;render();return}
   if(e.hasAttribute("data-rerender")){render();return}
+  if(e.hasAttribute("data-gshare")){var gsh=goal(e.getAttribute("data-gshare"));if(!gsh)return;gsh.shared=e.checked;saveGoal(e.getAttribute("data-gshare"),gsh).then(function(ok){if(ok)flash(e.checked?"Shared with your family.":"Now private.")});return}
+  if(e.hasAttribute("data-famname")){var fnm=e.value.trim();if(!fnm||!fdb||!fdb.setName){render();return}fdb.setName(fnm).then(function(){flash("Saved")},function(){ui.err="Your name could not be saved.";render()});return}
   if(e.hasAttribute("data-jpick")){if(e.value){ui.jday=e.value;render();window.scrollTo(0,0)}return}
   if(e.hasAttribute("data-filter")){ui[e.getAttribute("data-filter")]=e.value;render();return}
   if(e.hasAttribute("data-gfield")){var id=e.getAttribute("data-id"),g=goal(id);if(!g)return;var fld=e.getAttribute("data-gfield"),v=e.value.trim();if(fld==="title"&&!v){render();return}if(g[fld]===v)return;g[fld]=v;saveGoal(id,g);return}
@@ -2232,6 +2265,7 @@ function start(){
   window.claude.use("downloads").then(function(d){if(d){saver=d;render()}});
   window.claude.use("assets").then(function(a){if(a){store=a;render()}});
   window.claude.use("sample").then(function(s){if(s){ask=s;render()}});
+  window.claude.use("family").then(function(f){if(!f)return;fdb=f;FCOLLS.forEach(function(c){f.collection(c).onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=x.data()});S[c]=o;render()},function(){})});f.onInfo(function(i){FAM=i&&i.space?i:null;render()});f.onPartnerGoals(function(l){S.pgoals=l||[];render()})}).catch(function(){});
   window.claude.use("user").then(function(u){if(u&&u.can)return u.can("data.write").then(function(v){if(v===false){canWrite=false;render()}})}).catch(function(){});
 }
 (function(){

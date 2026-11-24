@@ -794,6 +794,8 @@ nav a.tour-on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--ink)}
 var S={tax:null,goals:{},skills:{},improve:{},log:{},resources:{},paths:{},levels:{},habits:{},journal:{},tasks:{},plans:{},workouts:{},trackers:{},clients:{},projects:{},acts:{},routines:{},checkins:{},meals:{},money:{},subs:{},trash:{},invoices:{},pmoney:{},savings:{},accounts:{},briefs:{}};var PATHS={},LIB={};
 var loaded={},db=null,ask=null,store=null,saver=null,lastView=null,canWrite=true,slow=false,dead=false;
 /* Family: shared collections start with f_ and live in the shared space. FAM is null until a family space is known. */
+/* FAMILY_ON: the shared Family portal. Switched off Nov 2026 (Melissa only for now); the data and code are kept. Set to true to bring it back. */
+var FAMILY_ON=false;
 var fdb=null,FAM=null,FCOLLS=["f_trash","f_people","f_events","f_habits","f_feedback","f_chores","f_todos","f_maint","f_goals","f_hcats","f_hbills","f_hmoney","f_hsave","f_gifts","f_items","f_lists","f_trips","f_checkins","f_invest","f_invlog","f_watch"];S.pgoals=[];FCOLLS.forEach(function(c){S[c]={}});
 function storeFor(coll){return coll.indexOf("f_")===0?fdb:db}
 var ui={socp:"personal",socq:null,socv:"feed",socPost:null,socAdd:null,mon:"budget",brief:null,briefBusy:{},skBusy:{},exsel:"",q:"",psx:{"planned":true,"in progress":true,"waiting":true,"done":false},cs:{lead:true,active:true,paused:false,past:false},pj:null,pt:"overview",pjFrom:null,cl:null,pv:"all",mk:"income",rt:{},cih:false,fd:null,wo:null,ci:null,fw:0,nd:0,fit:"training",biz:"clients",nw:0,lib:"",pl:null,day:null,month:null,week:null,prev:null,resBusy:{},upBusy:false,saved:null,scrollTo:null,sub:null,path:null,pathBusy:{},open:null,editTax:false,fArea:"",fStatus:"",plan:{},review:null,confirm:null};
@@ -1469,11 +1471,11 @@ function goalsGuide(){
 }
 function goalCard(g){
   var p=pct(g),open=ui.open===g.id,pl=ui.plan[g.id];
-  var h='<div class="card goal" id="goal-'+g.id+'"><div class="spread"><div><button class="title" data-act="g-open" data-id="'+g.id+'" aria-expanded="'+open+'">'+esc(g.title)+'</button><div class="small muted">'+esc(areaName(g.area))+(g.sub?" · "+esc(g.sub):"")+(g.due?" · by "+esc(g.due):"")+'</div></div><span class="row" style="gap:6px">'+(g.shared?'<span class="pill">Shared with family</span>':"")+'<span class="pill '+esc(g.status)+'">'+esc(g.status)+'</span></span></div><div class="row"><div class="bar" style="flex:1" role="progressbar" aria-valuenow="'+p+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+p+'%"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+p+'%</span></div>';
+  var h='<div class="card goal" id="goal-'+g.id+'"><div class="spread"><div><button class="title" data-act="g-open" data-id="'+g.id+'" aria-expanded="'+open+'">'+esc(g.title)+'</button><div class="small muted">'+esc(areaName(g.area))+(g.sub?" · "+esc(g.sub):"")+(g.due?" · by "+esc(g.due):"")+'</div></div><span class="row" style="gap:6px">'+(g.shared&&FAMILY_ON?'<span class="pill">Shared with family</span>':"")+'<span class="pill '+esc(g.status)+'">'+esc(g.status)+'</span></span></div><div class="row"><div class="bar" style="flex:1" role="progressbar" aria-valuenow="'+p+'" aria-valuemin="0" aria-valuemax="100"><i style="width:'+p+'%"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">'+p+'%</span></div>';
   var gfl=goalFlags(g);if(gfl.length)h+='<div class="gflags">'+gfl.map(function(x){return'<button class="gflag" '+goFix(g.id,x[1])+'>'+x[0]+'</button>'}).join("")+'</div>';
   if(open){
     h+='<div class="detail"><div class="row"><div class="f" style="flex:2 1 240px"><label for="gt-'+g.id+'">Goal</label><input type="text" id="gt-'+g.id+'" data-gfield="title" data-id="'+g.id+'" value="'+esc(g.title)+'"></div><div class="f"><label for="gs-'+g.id+'">Status</label><select id="gs-'+g.id+'" data-gfield="status" data-id="'+g.id+'">'+["draft","active","paused","done"].map(function(s){return'<option'+(g.status===s?" selected":"")+'>'+s+'</option>'}).join("")+'</select></div><div class="f"><label for="gg-'+g.id+'">Target</label><input type="text" id="gg-'+g.id+'" data-gfield="target" data-id="'+g.id+'" value="'+esc(g.target||"")+'" placeholder="A number or result"></div><div class="f"><label for="gd-'+g.id+'">By when</label><input type="date" id="gd-'+g.id+'" data-gfield="due" data-id="'+g.id+'" value="'+esc(g.due||"")+'"></div></div>';
-    if(FAM)h+='<label class="row small gshare"><input type="checkbox"'+(g.shared?" checked":"")+' data-gshare="'+g.id+'"> Show to family <span class="muted">· '+(g.shared?"visible on the Family page":"private, only you can see it")+'</span></label>';
+    if(FAM&&FAMILY_ON)h+='<label class="row small gshare"><input type="checkbox"'+(g.shared?" checked":"")+' data-gshare="'+g.id+'"> Show to family <span class="muted">· '+(g.shared?"visible on the Family page":"private, only you can see it")+'</span></label>';
     h+='<div class="f"><label for="gw-'+g.id+'">Why it matters</label><textarea id="gw-'+g.id+'" data-gfield="why" data-id="'+g.id+'" placeholder="What changes when this is done?">'+esc(g.why||"")+'</textarea></div>';
     var pts=g.points||[],lastp=pts.length?pts[pts.length-1]:null;
     h+='<div class="card inset"><div class="head"><h3>Result number</h3><p class="small muted">The one number that shows this goal is working. Record it regularly so actions can be compared with results.</p></div><div class="row"><div class="f"><label for="gm-'+g.id+'">What you measure</label><input type="text" id="gm-'+g.id+'" data-gfield="metric" data-id="'+g.id+'" value="'+esc(g.metric||"")+'" placeholder="for example followers, revenue, sessions per week"></div><form class="add" data-form="point" data-id="'+g.id+'" style="flex:1 1 200px"><div class="f"><label for="gp-'+g.id+'">Value today</label><input type="text" inputmode="decimal" id="gp-'+g.id+'" class="keep" placeholder="number"></div><button class="btn" type="submit">Record</button></form></div>'+(lastp?'<p class="small">Latest: <b>'+esc(lastp.v)+'</b> on '+esc(lastp.d)+(pts.length>1?' · started at '+esc(pts[0].v)+' on '+esc(pts[0].d):'')+'</p>':'')+spark(pts)+'</div>';
@@ -2206,13 +2208,13 @@ function pushCard(){
   if(st.on)return h+'<div class="row"><button class="btn" data-act="push-test">Send a test notification</button><button class="btn ghost" data-act="push-off">Turn off on this device</button></div></div>';
   return h+'<div class="row"><button class="btn primary" data-act="push-on"'+(ui.pushBusy?" disabled":"")+'>'+(ui.pushBusy?"Turning on…":"Turn on notifications")+'</button></div><p class="small muted">Your device will ask you to allow notifications. Tap Allow.</p></div>';
 }
-function fbUnread(){if(!FAM||!famOwner())return 0;var seen=pdoc("fbseen").at||"";return list("f_feedback").filter(function(x){return x.by!==famMe()&&(x.at||"")>seen}).length}
+function fbUnread(){if(!FAMILY_ON||!FAM||!famOwner())return 0;var seen=pdoc("fbseen").at||"";return list("f_feedback").filter(function(x){return x.by!==famMe()&&(x.at||"")>seen}).length}
 function fbWatch(o){var ids=Object.keys(o);if(fbKnown===null){fbKnown=ids;return}var fresh=ids.filter(function(k){return fbKnown.indexOf(k)<0&&o[k].by!==famMe()});fbKnown=ids;if(fresh.length&&FAM&&famOwner())flash("New feedback from "+(o[fresh[0]].byName||"the family")+". Open Feedback to read it.")}
 function fbBadges(){var n=fbUnread(),a=document.querySelector('nav a[href="#help"]');if(a){var c=a.querySelector(".navcount");if(n){if(!c){c=document.createElement("span");c.className="navcount";a.appendChild(c)}c.textContent=n}else if(c)c.remove()}
   var m=document.getElementById("menu");if(m){var mc=m.querySelector(".navcount");if(n){if(!mc){mc=document.createElement("span");mc.className="navcount";m.appendChild(mc)}mc.textContent=n}else if(mc)mc.remove()}}
 function vHelp(){
-  var h='<div class="head"><h1>Feedback</h1><p class="muted">Found something broken, or want something added? Write it here. Everyone in the family can see these.</p></div>';
-  if(FAM&&famOwner()){h+=vh("Notifications","new feedback");h+=pushCard()}
+  var h='<div class="head"><h1>Feedback</h1><p class="muted">Found something broken, or want something added? Write it here'+(FAMILY_ON?". Everyone in the family can see these.":" and it gets fixed from this list.")+'</p></div>';
+  if(FAMILY_ON&&FAM&&famOwner()){h+=vh("Notifications","new feedback");h+=pushCard()}
   h+=vh("Install the app","home screen icon");h+=installHtml();
   h+=vh("Tour","every page explained");
   h+='<div class="card"><p class="small">A step-by-step walk through each page and what it is for. It takes about three minutes.</p><div class="row"><button class="btn primary" data-act="tour">Start the tour</button></div></div>';
@@ -2866,6 +2868,7 @@ function railHints(){
 }
 window.addEventListener("resize",function(){if(view)railHints()});
 /* ---------- phone menu ---------- */
+if(!FAMILY_ON)[].forEach.call(document.querySelectorAll('nav a[href="#family"],#sheet a[href="#family"]'),function(a){a.remove()});
 (function(){
   var btn=document.getElementById("menu"),back=document.getElementById("navback"),nv=document.getElementById("mainnav");if(!btn||!nv)return;
   function setOpen(o){document.body.classList.toggle("navopen",o);btn.setAttribute("aria-expanded",o?"true":"false");btn.setAttribute("aria-label",o?"Close menu":"Open menu");if(o){var c=nv.querySelector('a[aria-current="page"]')||nv.querySelector("a");if(c)c.focus({preventScroll:false})}else if(document.activeElement&&nv.contains(document.activeElement))btn.focus()}
@@ -2899,7 +2902,7 @@ function installHtml(){
 function installGo(){if(!BIP){flash("Use the steps for your device.");return}var p=BIP;BIP=null;p.prompt();(p.userChoice||Promise.resolve()).then(function(){if(db)render()})}
 /* ---------- tour ---------- */
 var TOUR=[
- ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. The Family page is the one place you share. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
+ ["today","Welcome to Life Hub","This is your own hub for goals, plans, habits and notes. Your pages are private: nobody else can see them. This tour shows each page in order and takes about three minutes. Use Next and Back, or close it at any time; you can restart it from the Feedback page."],
  ["today","Getting around","On a computer the pages are in the menu on the left, grouped by what they are for. On a phone, tap the menu button (three lines) at the top right to see every page. The button at the bottom of the menu switches between light and dark."],
  ["help","Install it as an app",function(){if(isInstalled())return"You are already using the installed app, so you can skip this. To add it to another device, open the app link there; the steps are on the Feedback page.";var k=devKind();return(k==="ios"?"On an iPhone: open the app link in Safari, tap the Share button (square with an up arrow) at the bottom, then Add to Home Screen, then Add.":k==="android"?"On an Android phone: in Chrome, tap the three dots at the top right, then Install app or Add to Home screen, then Install.":"On a computer: in Chrome or Edge, click the install icon at the right end of the address bar, or open the menu and choose Install.")+" It then opens like a normal app from its icon. The full steps for every device are on this page, under Install the app."}],
  ["today","Today","Your home page. At the top: active goals, average progress and how your habits are going. The weekly rhythm is a short checklist of things worth doing each week. Below that are this month’s calendar, what is on today, your personal daily habits (tick them each day) and your goals at a glance."],
@@ -2912,28 +2915,30 @@ var TOUR=[
  ["study","Learning","Courses you are taking, with a card for each module’s notes. Schedule study sessions into the Planner, and ask Claude questions about what you are learning."],
  ["biz","Business","Clients, leads, projects and invoices, for anyone running their own work or a side business. Skip it if it does not apply to you."],
  ["social","Social","Social media accounts, with a place to keep each platform’s documents and plans. Optional, like Business."],
- ["money","Money","Your personal budget, spending, savings, investments and accounts. It only records and adds up what you enter; it does not give advice. It is private to you. The shared household budget is on the Family page under Money."],
+ ["money","Money","Your personal budget, spending, savings, investments and accounts. It only records and adds up what you enter; it does not give advice. It is private to you."],
  ["claude","Claude","Ask Claude for a weekly review of your hub: what moved, what slipped and what to focus on. This page also tracks the skills you are building with Claude."],
  ["learn","Library","Saved links, courses, guides and reference material, each with a simple path: read it, use it, turn it into a habit or skill."],
  ["find","Search","Search everything in your hub at once: goals, tasks, notes, journal entries, clients and more."],
  ["data","Backup","Download a copy of all your data, get back things you deleted, set a password and sign out."],
- ["help","Feedback","If something breaks or you have an idea, write it here. The whole family can see the reports, and they get fixed from this list. That is the tour. Enjoy!"]
+ ["help","Feedback","If something breaks or you have an idea, write it here and it gets fixed from this list. That is the tour. Enjoy!"]
 ];
 var tourEl=null;
 function tourStart(){ui.tour=0;tourShow()}
 function tourEnd(done){ui.tour=null;if(tourEl)tourEl.remove();tourEl=null;document.querySelectorAll(".tour-on").forEach(function(x){x.classList.remove("tour-on")});if(db&&!pdoc("tour").done)savePlan("tour",function(d){d.done=today()})}
+function tourSteps(){return FAMILY_ON?TOUR:TOUR.filter(function(t){return t[0]!=="family"})}
 function tourShow(){
-  var i=ui.tour,s=TOUR[i];if(s==null)return;
+  var TS=tourSteps(),i=ui.tour,s=TS[i];if(s==null)return;
   if(location.hash!=="#"+s[0])location.hash="#"+s[0];
   if(!tourEl){tourEl=document.createElement("div");tourEl.id="tour";tourEl.setAttribute("role","dialog");tourEl.setAttribute("aria-label","Tour");document.body.appendChild(tourEl);
-    tourEl.addEventListener("click",function(ev){var b=ev.target.closest("button[data-t]");if(!b)return;var t=b.getAttribute("data-t");if(t==="next"){if(ui.tour>=TOUR.length-1){tourEnd(true);return}ui.tour++;tourShow()}else if(t==="back"){if(ui.tour>0){ui.tour--;tourShow()}}else if(t==="install"){installGo()}else tourEnd(false)})}
-  tourEl.innerHTML='<div class="tourtop"><span class="small muted">'+(i+1)+' of '+TOUR.length+'</span><button class="btn ghost" data-t="close" aria-label="Close tour">Close</button></div><h2>'+esc(s[1])+'</h2><p>'+esc(typeof s[2]==="function"?s[2]():s[2])+'</p>'+(typeof s[2]==="function"&&BIP&&!isInstalled()&&devKind()!=="ios"?'<div class="row" style="justify-content:flex-start"><button class="btn" data-t="install">Install now</button></div>':"")+'<div class="tourbar"><i style="width:'+Math.round(100*(i+1)/TOUR.length)+'%"></i></div><div class="row"><button class="btn" data-t="back"'+(i?"":" disabled")+'>Back</button><button class="btn primary" data-t="next">'+(i===TOUR.length-1?"Finish":"Next")+'</button></div>';
+    tourEl.addEventListener("click",function(ev){var b=ev.target.closest("button[data-t]");if(!b)return;var t=b.getAttribute("data-t");if(t==="next"){if(ui.tour>=tourSteps().length-1){tourEnd(true);return}ui.tour++;tourShow()}else if(t==="back"){if(ui.tour>0){ui.tour--;tourShow()}}else if(t==="install"){installGo()}else tourEnd(false)})}
+  tourEl.innerHTML='<div class="tourtop"><span class="small muted">'+(i+1)+' of '+TS.length+'</span><button class="btn ghost" data-t="close" aria-label="Close tour">Close</button></div><h2>'+esc(s[1])+'</h2><p>'+esc(typeof s[2]==="function"?s[2]():s[2])+'</p>'+(typeof s[2]==="function"&&BIP&&!isInstalled()&&devKind()!=="ios"?'<div class="row" style="justify-content:flex-start"><button class="btn" data-t="install">Install now</button></div>':"")+'<div class="tourbar"><i style="width:'+Math.round(100*(i+1)/TOUR.length)+'%"></i></div><div class="row"><button class="btn" data-t="back"'+(i?"":" disabled")+'>Back</button><button class="btn primary" data-t="next">'+(i===TS.length-1?"Finish":"Next")+'</button></div>';
   document.querySelectorAll(".tour-on").forEach(function(x){x.classList.remove("tour-on")});
   document.querySelectorAll('nav a[href="#'+s[0]+'"],#sheet a[href="#'+s[0]+'"]').forEach(function(x){x.classList.add("tour-on")});
   window.scrollTo(0,0);var nb=tourEl.querySelector('[data-t="next"]');if(nb)nb.focus({preventScroll:true});
 }
 function tourAuto(){if(ui.tourAsked||!db)return;ui.tourAsked=true;if(!pdoc("tour").done&&!list("goals").length&&!list("journal").length&&!list("tasks").length)setTimeout(tourStart,600)}
 var NAMES={};var VIEWS={family:vFamily,help:vHelp,study:vStudy,social:vSocial,money:vMoney,find:vFind,data:vData,fit:vFit,biz:vBiz,plan:vPlan,today:vToday,goals:vGoals,areas:vAreas,claude:vClaude,log:vLog,learn:vLearn};
+if(!FAMILY_ON)delete VIEWS.family;
 function current(){var h=location.hash.replace("#","");return VIEWS[h]?h:"today"}
 function render(){
   var mbp=document.getElementById("mb-page");if(mbp){var cv=current();mbp.textContent=({family:"Family",help:"Feedback",study:"Learning",money:"Money",find:"Search",data:"Backup",fit:"Fitness",biz:"Business",plan:"Planner",today:"Today",goals:"Goals",areas:"Explore",claude:"Claude",log:"Journal",learn:"Library",social:"Social"})[cv]||""}
